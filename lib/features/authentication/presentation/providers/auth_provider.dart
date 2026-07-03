@@ -1,0 +1,164 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../models/user_model.dart';
+import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/repositories/auth_repository.dart';
+
+enum AuthStatus { initial, loading, authenticated, unauthenticated, error, otpRequired }
+
+class AuthState {
+  final AuthStatus status;
+  final UserModel? user;
+  final String? errorMessage;
+  final String? verificationMobileNumber;
+  final String? pendingWorkerId;
+
+  AuthState({
+    required this.status,
+    this.user,
+    this.errorMessage,
+    this.verificationMobileNumber,
+    this.pendingWorkerId,
+  });
+
+  factory AuthState.initial() => AuthState(status: AuthStatus.initial);
+
+  AuthState copyWith({
+    AuthStatus? status,
+    UserModel? user,
+    String? errorMessage,
+    String? verificationMobileNumber,
+    String? pendingWorkerId,
+  }) {
+    return AuthState(
+      status: status ?? this.status,
+      user: user ?? this.user,
+      errorMessage: errorMessage ?? this.errorMessage,
+      verificationMobileNumber: verificationMobileNumber ?? this.verificationMobileNumber,
+      pendingWorkerId: pendingWorkerId ?? this.pendingWorkerId,
+    );
+  }
+}
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return AuthRepositoryImpl();
+});
+
+final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  final repository = ref.read(authRepositoryProvider);
+  return AuthNotifier(repository);
+});
+
+class AuthNotifier extends StateNotifier<AuthState> {
+  final AuthRepository _repository;
+
+  AuthNotifier(this._repository) : super(AuthState.initial());
+
+  Future<void> checkAuth() async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final user = await _repository.autoLogin();
+      if (user != null) {
+        state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      } else {
+        state = state.copyWith(status: AuthStatus.unauthenticated);
+      }
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.unauthenticated, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> login(String email, String password) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final user = await _repository.login(email: email, password: password);
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> loginSocial(String provider) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final user = await _repository.loginSocial(provider: provider);
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> register({
+    required String name,
+    required String email,
+    required String password,
+    required String mobileNumber,
+    required String address,
+    String? profileImagePath,
+  }) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final user = await _repository.register(
+        name: name,
+        email: email,
+        password: password,
+        mobileNumber: mobileNumber,
+        address: address,
+        profileImagePath: profileImagePath,
+      );
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> requestWorkerLogin(String governmentId) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final mobile = await _repository.workerLogin(governmentId: governmentId);
+      state = state.copyWith(
+        status: AuthStatus.otpRequired,
+        verificationMobileNumber: mobile,
+        pendingWorkerId: governmentId,
+      );
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+    }
+  }
+
+  Future<bool> verifyWorkerOtp(String otp) async {
+    if (state.pendingWorkerId == null) return false;
+    final workerId = state.pendingWorkerId!;
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final user = await _repository.verifyWorkerOtp(governmentId: workerId, otp: otp);
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.otpRequired,
+        errorMessage: e.toString(),
+      );
+      return false;
+    }
+  }
+
+  Future<void> loginAdmin(String email, String password) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final user = await _repository.adminLogin(email: email, password: password);
+      state = state.copyWith(status: AuthStatus.authenticated, user: user);
+    } catch (e) {
+      state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> logout() async {
+    state = state.copyWith(status: AuthStatus.loading);
+    await _repository.logout();
+    state = AuthState.initial().copyWith(status: AuthStatus.unauthenticated);
+  }
+
+  void clearError() {
+    state = state.copyWith(errorMessage: null);
+  }
+}
