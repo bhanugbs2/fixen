@@ -1,0 +1,370 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "FIXEN API Documentation",
+    "description": "REST API endpoints for the FIXEN backend app service connecting customers, workers, and admins.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new client user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password", "mobileNumber", "address"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "password": { "type": "string" },
+                  "mobileNumber": { "type": "string" },
+                  "address": { "type": "string" },
+                  "profileImage": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Successfully registered client" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Client user login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Successful login" }
+        }
+      }
+    },
+    "/auth/worker-register": {
+      "post": {
+        "summary": "Register a new service worker (with document files upload)",
+        "description": "Multi-part form data containing files for profileImage, aadhaarCard, and drivingLicense.",
+        "responses": {
+          "201": { "description": "Successful worker registration" }
+        }
+      }
+    },
+    "/auth/worker-login": {
+      "post": {
+        "summary": "Worker login initiation by Government ID",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["governmentId"],
+                "properties": {
+                  "governmentId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OTP dispatched, returns worker's mobile number" }
+        }
+      }
+    },
+    "/auth/verify-otp": {
+      "post": {
+        "summary": "Worker OTP verification to complete authentication",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["governmentId", "otp"],
+                "properties": {
+                  "governmentId": { "type": "string" },
+                  "otp": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OTP verified successfully. Returns JWT tokens." }
+        }
+      }
+    },
+    "/auth/admin-login": {
+      "post": {
+        "summary": "Admin user login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Admin authorized successfully" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Fetch logged-in profile details",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Profile details returned" }
+        }
+      }
+    },
+    "/workers/status": {
+      "put": {
+        "summary": "Toggle active / offline worker status",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["isOnline"],
+                "properties": {
+                  "isOnline": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Status toggled" }
+        }
+      }
+    },
+    "/workers/busy": {
+      "put": {
+        "summary": "Toggle worker busy status",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["isBusy"],
+                "properties": {
+                  "isBusy": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Busy status updated" }
+        }
+      }
+    },
+    "/workers/commission": {
+      "get": {
+        "summary": "Fetch worker pending commission logs and weekly earnings",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Commission statistics retrieved" }
+        }
+      }
+    },
+    "/maps/nearby-workers": {
+      "get": {
+        "summary": "Search nearby workers with fallback logic (5 KM -> 10 KM -> 20 KM)",
+        "parameters": [
+          { "name": "latitude", "in": "query", "required": true, "schema": { "type": "number" } },
+          { "name": "longitude", "in": "query", "required": true, "schema": { "type": "number" } },
+          { "name": "service", "in": "query", "required": false, "schema": { "type": "string", "enum": ["Electrician", "Plumber", "Carpenter"] } }
+        ],
+        "responses": {
+          "200": { "description": "Nearby workers returned" }
+        }
+      }
+    },
+    "/bookings": {
+      "get": {
+        "summary": "Fetch bookings matching current role",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of bookings" }
+        }
+      },
+      "post": {
+        "summary": "Submit a new service booking request (Client)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["category", "description", "latitude", "longitude"],
+                "properties": {
+                  "category": { "type": "string", "enum": ["Electrician", "Plumber", "Carpenter"] },
+                  "description": { "type": "string" },
+                  "latitude": { "type": "number" },
+                  "longitude": { "type": "number" },
+                  "attachedImages": { "type": "array", "items": { "type": "string" } },
+                  "voiceRecordings": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Booking request successfully generated" }
+        }
+      }
+    },
+    "/bookings/{id}/quote": {
+      "post": {
+        "summary": "Submit service price estimation quote (Worker)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["price", "eta"],
+                "properties": {
+                  "price": { "type": "number" },
+                  "eta": { "type": "number", "description": "ETA in minutes" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Quote registered successfully" }
+        }
+      }
+    },
+    "/bookings/{id}/accept": {
+      "post": {
+        "summary": "Accept quotation from worker (Client)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["workerId"],
+                "properties": {
+                  "workerId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Quote accepted. Booking status updated to travelling." }
+        }
+      }
+    },
+    "/bookings/{id}/verify-otp": {
+      "post": {
+        "summary": "Verify customer OTP code (Worker)",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["otp"],
+                "properties": {
+                  "otp": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OTP verified successfully. Job in progress." }
+        }
+      }
+    },
+    "/payments/pay": {
+      "post": {
+        "summary": "Process payment for a completed booking",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["bookingId", "paymentMethod"],
+                "properties": {
+                  "bookingId": { "type": "string" },
+                  "paymentMethod": { "type": "string", "enum": ["Cash", "Online"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Payment logged (Cash) or online order generated (Razorpay)" }
+        }
+      }
+    },
+    "/admin/stats": {
+      "get": {
+        "summary": "Retrieve admin dashboard KPIs and revenue charts details",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Admin statistics summary" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
