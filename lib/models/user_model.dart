@@ -18,6 +18,7 @@ class UserModel {
   final bool? isOnline;
   final double? commissionDue;
   final bool? isBlocked;
+  final String? service; // 'Electrician', 'Plumber', 'Carpenter'
 
   UserModel({
     required this.id,
@@ -37,6 +38,7 @@ class UserModel {
     this.isOnline,
     this.commissionDue,
     this.isBlocked,
+    this.service,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,7 @@ class UserModel {
       isOnline: json['isOnline'] is bool ? json['isOnline'] : json['isOnline'] == 'true',
       commissionDue: json['commissionDue'] is num ? (json['commissionDue'] as num).toDouble() : double.tryParse(json['commissionDue']?.toString() ?? ''),
       isBlocked: json['isBlocked'] is bool ? json['isBlocked'] : json['isBlocked'] == 'true',
+      service: json['service'],
     );
   }
 
@@ -80,6 +83,7 @@ class UserModel {
       'isOnline': isOnline,
       'commissionDue': commissionDue,
       'isBlocked': isBlocked,
+      'service': service,
     };
   }
 
@@ -101,6 +105,7 @@ class UserModel {
     bool? isOnline,
     double? commissionDue,
     bool? isBlocked,
+    String? service,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -120,6 +125,7 @@ class UserModel {
       isOnline: isOnline ?? this.isOnline,
       commissionDue: commissionDue ?? this.commissionDue,
       isBlocked: isBlocked ?? this.isBlocked,
+      service: service ?? this.service,
     );
   }
 }

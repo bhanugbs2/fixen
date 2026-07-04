@@ -237,9 +237,9 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Service: Plumber  •  Rating: 4.8 ★',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        Text(
+                          'Service: ${user?.service ?? 'Plumber'}  •  Rating: ${user?.rating ?? 4.8} ★',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
                     ),

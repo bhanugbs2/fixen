@@ -7,18 +7,14 @@ import 'features/routes/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Dotenv configurations
   await EnvConfig.initialize();
-  
+
   // Initialize Hive caching database boxes
   await HiveHelper.initialize();
 
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

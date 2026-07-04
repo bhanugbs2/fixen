@@ -130,7 +130,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<UserModel> verifyWorkerOtp({required String governmentId, required String otp}) async {
+  Future<UserModel> verifyWorkerOtp({
+    required String governmentId,
+    required String otp,
+    String? category,
+  }) async {
     try {
       final response = await _apiClient.post('/auth/verify-otp', data: {
         'governmentId': governmentId,
@@ -167,6 +171,7 @@ class AuthRepositoryImpl implements AuthRepository {
           isOnline: true,
           commissionDue: 0.0,
           isBlocked: false,
+          service: category ?? 'Plumber',
         );
         await _secureStorage.saveTokens(accessToken: 'mock_worker_token', refreshToken: 'mock_worker_refresh');
         await _secureStorage.saveUserRole('worker');

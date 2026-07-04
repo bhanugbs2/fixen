@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/fixen_logo.dart';
 import '../../../../common/widgets/glass_container.dart';
+import '../providers/auth_provider.dart';
 
-class RoleSelectionPage extends StatelessWidget {
+class RoleSelectionPage extends ConsumerWidget {
   const RoleSelectionPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final size = MediaQuery.sizeOf(context);
 
@@ -113,7 +115,7 @@ class RoleSelectionPage extends StatelessWidget {
                                 'Receive service bookings. Access your jobs & earnings.',
                             icon: Icons.engineering_rounded,
                             color: const Color(0xFF0EA5E9),
-                            onTap: () => context.push('/worker-login'),
+                            onTap: () => _showCategorySelectionBottomSheet(context, ref),
                           ),
                           const SizedBox(height: 14),
                           _RoleCard(
@@ -155,6 +157,153 @@ class RoleSelectionPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showCategorySelectionBottomSheet(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.5),
+      isScrollControlled: true,
+      builder: (context) {
+        return GlassContainer(
+          borderRadius: 28,
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          bgGradientColor: isDark ? const Color(0xE60B1329) : Colors.white.withOpacity(0.95),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white30 : Colors.black26,
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Select Your Specialty 🛠️',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Outfit',
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Choose the category you are verified to provide services in. This will customize your incoming jobs.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildCategoryOptionCard(
+                context: context,
+                ref: ref,
+                title: 'Electrician',
+                description: 'Resolve wiring, switches, lighting & appliance repairs.',
+                icon: Icons.bolt_rounded,
+                color: const Color(0xFFF59E0B),
+              ),
+              const SizedBox(height: 12),
+              _buildCategoryOptionCard(
+                context: context,
+                ref: ref,
+                title: 'Carpenter',
+                description: 'Repair furniture, doors, cupboards & woodwork.',
+                icon: Icons.handyman_rounded,
+                color: const Color(0xFF10B981),
+              ),
+              const SizedBox(height: 12),
+              _buildCategoryOptionCard(
+                context: context,
+                ref: ref,
+                title: 'Plumber',
+                description: 'Fix leaks, pipes, faucets, drainage & installations.',
+                icon: Icons.water_drop_rounded,
+                color: const Color(0xFF0EA5E9),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCategoryOptionCard({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String title,
+    required String description,
+    required IconData icon,
+    required Color color,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () {
+        ref.read(authNotifierProvider.notifier).selectWorkerCategory(title);
+        Navigator.pop(context);
+        context.push('/worker-login?category=$title');
+      },
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16),
+        borderRadius: 16,
+        bgGradientColor: isDark ? const Color(0x0CFFFFFF) : Colors.black.withOpacity(0.02),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withOpacity(isDark ? 0.2 : 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withOpacity(0.3)),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: isDark ? Colors.white30 : Colors.black38,
+            ),
+          ],
+        ),
       ),
     );
   }

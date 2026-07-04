@@ -11,6 +11,7 @@ class AuthState {
   final String? errorMessage;
   final String? verificationMobileNumber;
   final String? pendingWorkerId;
+  final String? selectedWorkerCategory;
 
   AuthState({
     required this.status,
@@ -18,6 +19,7 @@ class AuthState {
     this.errorMessage,
     this.verificationMobileNumber,
     this.pendingWorkerId,
+    this.selectedWorkerCategory,
   });
 
   factory AuthState.initial() => AuthState(status: AuthStatus.initial);
@@ -28,6 +30,7 @@ class AuthState {
     String? errorMessage,
     String? verificationMobileNumber,
     String? pendingWorkerId,
+    String? selectedWorkerCategory,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -35,6 +38,7 @@ class AuthState {
       errorMessage: errorMessage ?? this.errorMessage,
       verificationMobileNumber: verificationMobileNumber ?? this.verificationMobileNumber,
       pendingWorkerId: pendingWorkerId ?? this.pendingWorkerId,
+      selectedWorkerCategory: selectedWorkerCategory ?? this.selectedWorkerCategory,
     );
   }
 }
@@ -111,6 +115,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  void selectWorkerCategory(String category) {
+    state = state.copyWith(selectedWorkerCategory: category);
+  }
+
   Future<void> requestWorkerLogin(String governmentId) async {
     state = state.copyWith(status: AuthStatus.loading);
     try {
@@ -128,9 +136,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> verifyWorkerOtp(String otp) async {
     if (state.pendingWorkerId == null) return false;
     final workerId = state.pendingWorkerId!;
+    final category = state.selectedWorkerCategory;
     state = state.copyWith(status: AuthStatus.loading);
     try {
-      final user = await _repository.verifyWorkerOtp(governmentId: workerId, otp: otp);
+      final user = await _repository.verifyWorkerOtp(
+        governmentId: workerId,
+        otp: otp,
+        category: category,
+      );
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
       return true;
     } catch (e) {

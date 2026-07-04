@@ -7,7 +7,8 @@ import '../../../../common/widgets/primary_button.dart';
 import '../providers/auth_provider.dart';
 
 class WorkerLoginPage extends ConsumerStatefulWidget {
-  const WorkerLoginPage({super.key});
+  final String category;
+  const WorkerLoginPage({super.key, required this.category});
 
   @override
   ConsumerState<WorkerLoginPage> createState() => _WorkerLoginPageState();
@@ -59,7 +60,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
           icon: const Icon(Icons.arrow_back_ios_rounded),
           onPressed: () => context.go('/role-selection'),
         ),
-        title: const Text('Worker Access Portal'),
+        title: Text('${widget.category} Portal'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -71,7 +72,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
               children: [
                 const SizedBox(height: 20),
                 Text(
-                  'Worker Identification 🛠️',
+                  '${widget.category} Access 🛠️',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -81,7 +82,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Workers must be registered in the FIXEN Office system. Enter your Government Worker ID to receive a verification OTP on your registered mobile number.',
+                  'Workers registered as ${widget.category.toLowerCase()}s must be enrolled in the FIXEN database. Enter your Government Worker ID to receive a verification OTP on your registered mobile number.',
                   style: TextStyle(
                     fontSize: 15,
                     color: isDark ? Colors.white60 : const Color(0xFF475569),

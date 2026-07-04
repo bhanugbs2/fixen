@@ -12,7 +12,11 @@ abstract class AuthRepository {
     String? profileImagePath,
   });
   Future<String> workerLogin({required String governmentId}); // Returns registered mobile number
-  Future<UserModel> verifyWorkerOtp({required String governmentId, required String otp});
+  Future<UserModel> verifyWorkerOtp({
+    required String governmentId,
+    required String otp,
+    String? category,
+  });
   Future<UserModel> adminLogin({required String email, required String password});
   Future<UserModel?> autoLogin();
   Future<void> logout();

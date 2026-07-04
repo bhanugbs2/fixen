@@ -40,7 +40,10 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/worker-login',
-      builder: (context, state) => const WorkerLoginPage(),
+      builder: (context, state) {
+        final category = state.uri.queryParameters['category'] ?? 'Electrician';
+        return WorkerLoginPage(category: category);
+      },
     ),
     GoRoute(
       path: '/worker-otp',
