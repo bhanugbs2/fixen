@@ -56,7 +56,12 @@ class _WorkerOtpPageState extends ConsumerState<WorkerOtpPage> {
 
       if (success) {
         if (mounted) {
-          context.go('/worker-dashboard');
+          final user = ref.read(authNotifierProvider).user;
+          if (user != null && (user.service == null || user.service!.isEmpty)) {
+            context.go('/worker-work-selection');
+          } else {
+            context.go('/worker-dashboard');
+          }
         }
       } else {
         setState(() {

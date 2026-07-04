@@ -4,7 +4,8 @@ const {
   toggleStatus,
   toggleBusy,
   getCommissionStatus,
-  getWorkerReviews
+  getWorkerReviews,
+  updateProfile
 } = require('../controllers/workerController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -12,6 +13,7 @@ const { protect, authorize } = require('../middleware/auth');
 router.put('/status', protect, authorize('worker'), toggleStatus);
 router.put('/busy', protect, authorize('worker'), toggleBusy);
 router.get('/commission', protect, authorize('worker'), getCommissionStatus);
+router.put('/profile', protect, authorize('worker'), updateProfile);
 
 // Public / User access to worker reviews
 router.get('/:id/reviews', getWorkerReviews);

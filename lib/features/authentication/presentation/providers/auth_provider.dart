@@ -174,4 +174,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
   void clearError() {
     state = state.copyWith(errorMessage: null);
   }
+
+  Future<bool> updateWorkerCategory(String category) async {
+    state = state.copyWith(status: AuthStatus.loading);
+    try {
+      final user = await _repository.updateWorkerCategory(category: category);
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: user,
+        selectedWorkerCategory: category,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        errorMessage: e.toString(),
+      );
+      return false;
+    }
+  }
 }

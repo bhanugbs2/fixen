@@ -158,3 +158,53 @@ exports.getWorkerReviews = async (req, res, next) => {
     next(err);
   }
 };
+
+// @desc    Update Worker Profile Details (e.g. service category)
+// @route   PUT /api/v1/workers/profile
+// @access  Private (Worker)
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { service } = req.body;
+
+    if (!service) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service category is required',
+        data: null
+      });
+    }
+
+    if (!['Electrician', 'Plumber', 'Carpenter'].includes(service)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid service category. Must be one of Electrician, Plumber, Carpenter',
+        data: null
+      });
+    }
+
+    const worker = await Worker.findByIdAndUpdate(
+      req.user.id,
+      { service },
+      { new: true, runValidators: true }
+    );
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'Worker not found',
+        data: null
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Worker profile updated successfully',
+      user: worker,
+      data: {
+        user: worker
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};

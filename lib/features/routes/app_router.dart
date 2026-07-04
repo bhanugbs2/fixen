@@ -8,6 +8,7 @@ import '../authentication/presentation/pages/role_selection_page.dart';
 import '../authentication/presentation/pages/splash_page.dart';
 import '../authentication/presentation/pages/worker_login_page.dart';
 import '../authentication/presentation/pages/worker_otp_page.dart';
+import '../authentication/presentation/pages/worker_work_selection_page.dart';
 import '../user/presentation/pages/user_dashboard_page.dart';
 import '../worker/presentation/pages/worker_dashboard_page.dart';
 import '../admin/presentation/pages/admin_dashboard_page.dart';
@@ -60,6 +61,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/worker-dashboard',
       builder: (context, state) => const WorkerDashboardPage(),
+    ),
+    GoRoute(
+      path: '/worker-work-selection',
+      builder: (context, state) => const WorkerWorkSelectionPage(),
     ),
     GoRoute(
       path: '/admin-dashboard',

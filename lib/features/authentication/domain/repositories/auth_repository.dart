@@ -21,4 +21,5 @@ abstract class AuthRepository {
   Future<UserModel?> autoLogin();
   Future<void> logout();
   Future<void> forgotPassword(String email);
+  Future<UserModel> updateWorkerCategory({required String category});
 }

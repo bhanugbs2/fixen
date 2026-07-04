@@ -122,7 +122,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return response.data['mobileNumber'] ?? '';
     } catch (e) {
       // Mock worker logins
-      if (governmentId == "W12345" || governmentId == "worker") {
+      if (governmentId == "W12345" || governmentId == "worker" || governmentId == "W_NEW" || governmentId == "new") {
         return "+919876543210";
       }
       throw ServerException(message: 'Government ID not verified in FIXEN database.');
@@ -171,7 +171,7 @@ class AuthRepositoryImpl implements AuthRepository {
           isOnline: true,
           commissionDue: 0.0,
           isBlocked: false,
-          service: category ?? 'Plumber',
+          service: (governmentId == 'W_NEW' || governmentId == 'new') ? null : (category ?? 'Plumber'),
         );
         await _secureStorage.saveTokens(accessToken: 'mock_worker_token', refreshToken: 'mock_worker_refresh');
         await _secureStorage.saveUserRole('worker');
@@ -263,6 +263,30 @@ class AuthRepositoryImpl implements AuthRepository {
         profileImage: '',
         role: 'user',
       );
+    }
+  }
+
+  @override
+  Future<UserModel> updateWorkerCategory({required String category}) async {
+    try {
+      final response = await _apiClient.put('/workers/profile', data: {
+        'service': category,
+      });
+
+      final data = response.data;
+      final user = UserModel.fromJson(data['user'] ?? data);
+      await HiveHelper.cacheData(HiveHelper.profileBoxName, 'current_user', user.toJson());
+      return user;
+    } catch (e) {
+      // Local fallback for offline/mock database
+      final cachedJson = HiveHelper.getCachedData(HiveHelper.profileBoxName, 'current_user');
+      if (cachedJson != null) {
+        final existingUser = UserModel.fromJson(Map<String, dynamic>.from(cachedJson));
+        final updatedUser = existingUser.copyWith(service: category);
+        await HiveHelper.cacheData(HiveHelper.profileBoxName, 'current_user', updatedUser.toJson());
+        return updatedUser;
+      }
+      throw ServerException(message: 'Failed to update specialty and no cached profile found.');
     }
   }
 }
