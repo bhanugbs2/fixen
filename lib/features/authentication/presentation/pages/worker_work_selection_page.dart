@@ -26,9 +26,17 @@ class _WorkerWorkSelectionPageState extends ConsumerState<WorkerWorkSelectionPag
       return;
     }
 
-    final success = await ref.read(authNotifierProvider.notifier).updateWorkerCategory(_selectedCategory!);
-    if (success && mounted) {
-      context.go('/worker-dashboard');
+    final authState = ref.read(authNotifierProvider);
+    if (authState.status == AuthStatus.authenticated) {
+      final success = await ref.read(authNotifierProvider.notifier).updateWorkerCategory(_selectedCategory!);
+      if (success && mounted) {
+        context.go('/worker-dashboard');
+      }
+    } else {
+      ref.read(authNotifierProvider.notifier).selectWorkerCategory(_selectedCategory!);
+      if (mounted) {
+        context.go('/worker-login?category=${Uri.encodeComponent(_selectedCategory!)}');
+      }
     }
   }
 

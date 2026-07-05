@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../../common/widgets/custom_text_field.dart';
+import '../../../../common/widgets/fixen_map_view.dart';
 import '../../../../common/widgets/primary_button.dart';
 import '../../../../common/widgets/glass_container.dart';
 
@@ -39,6 +40,7 @@ class _RequestServicePageState extends State<RequestServicePage> {
 
   double _userLat = 16.3067;
   double _userLng = 80.4365;
+  String _serviceAddress = 'Brodipet, Guntur, Andhra Pradesh';
   bool _hasFetchedLocation = false;
 
   @override
@@ -60,6 +62,7 @@ class _RequestServicePageState extends State<RequestServicePage> {
         setState(() {
           _userLat = position.latitude;
           _userLng = position.longitude;
+          _serviceAddress = 'Pinned at ${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
           _hasFetchedLocation = true;
         });
       }
@@ -104,6 +107,11 @@ class _RequestServicePageState extends State<RequestServicePage> {
   }
 
   void _startSearch() {
+    final formState = _formKey.currentState;
+    if (formState != null && !formState.validate()) {
+      return;
+    }
+
     setState(() {
       _isSearching = true;
       _noWorkersFound = false;
@@ -154,6 +162,109 @@ class _RequestServicePageState extends State<RequestServicePage> {
       _noWorkersFound = true;
       _quotesReceived = false;
     });
+  }
+
+  void _showLocationPicker() {
+    var pendingLat = _userLat;
+    var pendingLng = _userLng;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SizedBox(
+              height: MediaQuery.sizeOf(context).height * 0.78,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Adjust Service Location',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: FixenMapView(
+                      latitude: pendingLat,
+                      longitude: pendingLng,
+                      zoom: 16,
+                      markers: const [
+                        FixenMapMarker(
+                          id: 'nearby_worker',
+                          label: 'Nearby worker',
+                          latitude: 16.3102,
+                          longitude: 80.4398,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Selected: ${pendingLat.toStringAsFixed(5)}, ${pendingLng.toStringAsFixed(5)}',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setModalState(() {
+                                    pendingLat += 0.001;
+                                    pendingLng += 0.001;
+                                  });
+                                },
+                                icon: const Icon(Icons.near_me_rounded, size: 16),
+                                label: const Text('Nudge Pin'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _userLat = pendingLat;
+                                    _userLng = pendingLng;
+                                    _serviceAddress =
+                                        'Custom pin: ${pendingLat.toStringAsFixed(5)}, ${pendingLng.toStringAsFixed(5)}';
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                icon: const Icon(Icons.check_rounded, size: 16),
+                                label: const Text('Use Location'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -396,28 +507,53 @@ class _RequestServicePageState extends State<RequestServicePage> {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
+                          children: [
+                            const Text(
                               'Service Location',
                               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
-                              'Current location automatically pinned',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                              _hasFetchedLocation ? _serviceAddress : 'Using default pin. Tap Change to adjust.',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                           ],
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Pin adjust on map opened (Simulated)')),
-                          );
-                        },
+                        onPressed: _showLocationPicker,
                         child: const Text('Change'),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 180,
+                    child: FixenMapView(
+                      latitude: _userLat,
+                      longitude: _userLng,
+                      zoom: 14,
+                      liteMode: true,
+                      markers: const [
+                        FixenMapMarker(
+                          id: 'available_worker_1',
+                          label: 'Available tech',
+                          latitude: 16.3090,
+                          longitude: 80.4410,
+                        ),
+                        FixenMapMarker(
+                          id: 'available_worker_2',
+                          label: '5 km radius',
+                          latitude: 16.3010,
+                          longitude: 80.4300,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 36),

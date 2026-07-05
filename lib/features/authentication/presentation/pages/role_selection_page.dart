@@ -115,7 +115,7 @@ class RoleSelectionPage extends ConsumerWidget {
                                 'Receive service bookings. Access your jobs & earnings.',
                             icon: Icons.engineering_rounded,
                             color: const Color(0xFF0EA5E9),
-                            onTap: () => _showCategorySelectionBottomSheet(context, ref),
+                            onTap: () => context.push('/worker-work-selection'),
                           ),
                           const SizedBox(height: 14),
                           _RoleCard(

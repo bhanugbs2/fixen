@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import '../../../../common/widgets/custom_text_field.dart';
 import '../../../../common/widgets/glass_container.dart';
 import '../../../../common/widgets/primary_button.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
@@ -19,6 +20,14 @@ class _UserDashboardPageState extends ConsumerState<UserDashboardPage> {
   int _currentIndex = 0;
   String _currentAddress = "Locating address...";
   bool _isLoadingLocation = false;
+  bool _profileSeeded = false;
+  String _profileName = 'G Bhanu Shankar';
+  String _profileEmail = 'bhanushankargbs@gmail.com';
+  String _profilePhone = '+919876543211';
+  String _savedAddress = 'Flat 302, Brodipet, Guntur, Andhra Pradesh';
+  String _paymentMethod = 'UPI - bhanushankar@upi';
+  bool _pushAlerts = true;
+  bool _darkPreference = false;
 
   @override
   void initState() {
@@ -98,9 +107,16 @@ class _UserDashboardPageState extends ConsumerState<UserDashboardPage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
+    if (!_profileSeeded && user != null) {
+      _profileSeeded = true;
+      _profileName = user.name.isNotEmpty ? user.name : _profileName;
+      _profileEmail = user.email.isNotEmpty ? user.email : _profileEmail;
+      _profilePhone = user.mobileNumber.isNotEmpty ? user.mobileNumber : _profilePhone;
+      _savedAddress = user.address.isNotEmpty ? user.address : _savedAddress;
+    }
 
     final tabs = [
-      _buildHomeTab(context, user?.name ?? 'User'),
+      _buildHomeTab(context, _profileName),
       _buildHistoryTab(context),
       _buildNotificationsTab(context),
       _buildProfileTab(context, user),
@@ -700,25 +716,45 @@ class _UserDashboardPageState extends ConsumerState<UserDashboardPage> {
         child: Column(
           children: [
             _buildProfileAvatar(
-              name: user?.name ?? 'G Bhanu Shankar',
+              name: _profileName,
               service: user?.role ?? 'user',
               radius: 50,
             ),
             const SizedBox(height: 16),
             Text(
-              user?.name ?? 'G Bhanu Shankar',
+              _profileName,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              user?.email ?? 'bhanushankargbs@gmail.com',
+              _profileEmail,
               style: const TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 24),
-            _buildProfileMenuItem(context, icon: Icons.person_outline_rounded, title: 'Edit Personal Details'),
-            _buildProfileMenuItem(context, icon: Icons.map_outlined, title: 'Saved Addresses'),
-            _buildProfileMenuItem(context, icon: Icons.payment_rounded, title: 'Payment Methods'),
-            _buildProfileMenuItem(context, icon: Icons.settings_outlined, title: 'App Settings'),
+            _buildProfileMenuItem(
+              context,
+              icon: Icons.person_outline_rounded,
+              title: 'Edit Personal Details',
+              onTap: _showEditPersonalDetailsSheet,
+            ),
+            _buildProfileMenuItem(
+              context,
+              icon: Icons.map_outlined,
+              title: 'Saved Addresses',
+              onTap: _showSavedAddressesSheet,
+            ),
+            _buildProfileMenuItem(
+              context,
+              icon: Icons.payment_rounded,
+              title: 'Payment Methods',
+              onTap: _showPaymentMethodsSheet,
+            ),
+            _buildProfileMenuItem(
+              context,
+              icon: Icons.settings_outlined,
+              title: 'App Settings',
+              onTap: _showAppSettingsSheet,
+            ),
             _buildProfileMenuItem(
               context, 
               icon: Icons.logout_rounded, 
@@ -755,6 +791,231 @@ class _UserDashboardPageState extends ConsumerState<UserDashboardPage> {
           SnackBar(content: Text('Clicked $title (Simulated)')),
         );
       },
+    );
+  }
+
+  void _showEditPersonalDetailsSheet() {
+    final nameController = TextEditingController(text: _profileName);
+    final emailController = TextEditingController(text: _profileEmail);
+    final phoneController = TextEditingController(text: _profilePhone);
+
+    _showProfileSheet(
+      title: 'Edit Personal Details',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CustomTextField(controller: nameController, labelText: 'Full Name', prefixIcon: Icons.person_outline_rounded),
+          const SizedBox(height: 14),
+          CustomTextField(
+            controller: emailController,
+            labelText: 'Email Address',
+            prefixIcon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+          ),
+          const SizedBox(height: 14),
+          CustomTextField(
+            controller: phoneController,
+            labelText: 'Mobile Number',
+            prefixIcon: Icons.phone_outlined,
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 22),
+          PrimaryButton(
+            text: 'Save Details',
+            onPressed: () {
+              setState(() {
+                _profileName = nameController.text.trim().isEmpty ? _profileName : nameController.text.trim();
+                _profileEmail = emailController.text.trim().isEmpty ? _profileEmail : emailController.text.trim();
+                _profilePhone = phoneController.text.trim().isEmpty ? _profilePhone : phoneController.text.trim();
+              });
+              Navigator.pop(context);
+              _showSavedSnack('Personal details updated.');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSavedAddressesSheet() {
+    final addressController = TextEditingController(text: _savedAddress);
+
+    _showProfileSheet(
+      title: 'Saved Addresses',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CustomTextField(
+            controller: addressController,
+            labelText: 'Home Address',
+            prefixIcon: Icons.home_outlined,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 14),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.my_location_rounded, color: Theme.of(context).primaryColor),
+            title: const Text('Use Current GPS Location'),
+            subtitle: Text(_currentAddress, maxLines: 1, overflow: TextOverflow.ellipsis),
+            onTap: () async {
+              await _determinePosition();
+              addressController.text = _currentAddress;
+            },
+          ),
+          const SizedBox(height: 18),
+          PrimaryButton(
+            text: 'Save Address',
+            onPressed: () {
+              setState(() {
+                _savedAddress = addressController.text.trim().isEmpty ? _savedAddress : addressController.text.trim();
+              });
+              Navigator.pop(context);
+              _showSavedSnack('Saved address updated.');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentMethodsSheet() {
+    var selected = _paymentMethod.startsWith('Card')
+        ? 'Card'
+        : _paymentMethod.startsWith('Cash')
+            ? 'Cash'
+            : 'UPI';
+    final upiController = TextEditingController(
+      text: selected == 'UPI' ? _paymentMethod.replaceFirst('UPI - ', '') : 'bhanushankar@upi',
+    );
+    final cardController = TextEditingController(text: '**** **** **** 4242');
+
+    _showProfileSheet(
+      title: 'Payment Methods',
+      child: StatefulBuilder(
+        builder: (context, setModalState) {
+          Widget option(String value, IconData icon) {
+            final isSelected = selected == value;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(icon, color: isSelected ? Theme.of(context).primaryColor : Colors.grey),
+              title: Text(value),
+              trailing: Icon(isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded),
+              onTap: () => setModalState(() => selected = value),
+            );
+          }
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              option('UPI', Icons.qr_code_rounded),
+              if (selected == 'UPI') CustomTextField(controller: upiController, labelText: 'UPI ID'),
+              option('Card', Icons.credit_card_rounded),
+              if (selected == 'Card') CustomTextField(controller: cardController, labelText: 'Card Number'),
+              option('Cash', Icons.payments_outlined),
+              const SizedBox(height: 18),
+              PrimaryButton(
+                text: 'Save Payment Method',
+                onPressed: () {
+                  setState(() {
+                    if (selected == 'UPI') {
+                      _paymentMethod = 'UPI - ${upiController.text.trim()}';
+                    } else if (selected == 'Card') {
+                      _paymentMethod = 'Card - ${cardController.text.trim()}';
+                    } else {
+                      _paymentMethod = 'Cash on service completion';
+                    }
+                  });
+                  Navigator.pop(context);
+                  _showSavedSnack('Payment method updated.');
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAppSettingsSheet() {
+    _showProfileSheet(
+      title: 'App Settings',
+      child: StatefulBuilder(
+        builder: (context, setModalState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Push Notifications'),
+                subtitle: const Text('Booking, quote, payment, and service alerts'),
+                value: _pushAlerts,
+                onChanged: (value) {
+                  setState(() => _pushAlerts = value);
+                  setModalState(() {});
+                },
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Prefer Dark Mode'),
+                subtitle: const Text('Saved as a profile preference'),
+                value: _darkPreference,
+                onChanged: (value) {
+                  setState(() => _darkPreference = value);
+                  setModalState(() {});
+                },
+              ),
+              const SizedBox(height: 18),
+              PrimaryButton(
+                text: 'Done',
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showSavedSnack('Settings saved.');
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showProfileSheet({required String title, required Widget child}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 18,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                    IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                child,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSavedSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
 

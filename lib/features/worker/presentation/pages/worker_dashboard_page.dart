@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../common/widgets/glass_container.dart';
+import '../../../../common/widgets/fixen_map_view.dart';
 import '../../../../common/widgets/primary_button.dart';
 import '../../../../common/widgets/custom_text_field.dart';
 import '../../../authentication/presentation/providers/auth_provider.dart';
@@ -308,47 +309,36 @@ class _WorkerDashboardPageState extends ConsumerState<WorkerDashboardPage> {
                 ),
                 const SizedBox(height: 28),
 
-                // Location / Map Preview Placeholder
+                // Location / Map Preview
                 Text(
                   'Your Active GPS Radius (5 KM)',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
                 ),
                 const SizedBox(height: 16),
-                Container(
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: SizedBox(
                   height: 180,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
-                    gradient: LinearGradient(
-                      colors: isDark
-                          ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
-                          : [const Color(0xFFF8FAFC), const Color(0xFFF1F5F9)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    child: FixenMapView(
+                      latitude: 16.3067,
+                      longitude: 80.4365,
+                      zoom: 13.5,
+                      liteMode: true,
+                      markers: const [
+                        FixenMapMarker(
+                          id: 'job_request_1',
+                          label: 'Kitchen Pipe Burst',
+                          latitude: 16.3120,
+                          longitude: 80.4418,
+                        ),
+                        FixenMapMarker(
+                          id: 'job_request_2',
+                          label: 'Fan repair',
+                          latitude: 16.2998,
+                          longitude: 80.4311,
+                        ),
+                      ],
                     ),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: CustomPaint(
-                            painter: _GridPainter(isDark: isDark),
-                          ),
-                        ),
-                      ),
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.location_searching_rounded, size: 36, color: Theme.of(context).primaryColor),
-                            const SizedBox(height: 8),
-                            const Text('GPS tracking active', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            const Text('Updating coordinates every 10 seconds', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
                 ),
                 const SizedBox(height: 24),

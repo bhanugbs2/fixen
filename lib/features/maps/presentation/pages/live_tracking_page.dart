@@ -1,22 +1,26 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../../../common/widgets/fixen_map_view.dart';
 import '../../../../common/widgets/glass_container.dart';
 import '../../../../common/widgets/primary_button.dart';
 import '../../../../common/widgets/custom_text_field.dart';
+import '../../../authentication/presentation/providers/auth_provider.dart';
 
-class LiveTrackingPage extends StatefulWidget {
+class LiveTrackingPage extends ConsumerStatefulWidget {
   final String bookingId;
 
   const LiveTrackingPage({super.key, required this.bookingId});
 
   @override
-  State<LiveTrackingPage> createState() => _LiveTrackingPageState();
+  ConsumerState<LiveTrackingPage> createState() => _LiveTrackingPageState();
 }
 
-class _LiveTrackingPageState extends State<LiveTrackingPage> {
+class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
   // Lifecycle States:
   // 1. travelling
   // 2. arrived (OTP verification pending)
@@ -53,6 +57,10 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
   double _zoomLevel = 15.0;
   Offset _mapOffset = Offset.zero;
   Offset? _dragStart;
+  String get _targetDashboard {
+    final userRole = ref.read(authNotifierProvider).user?.role ?? 'user';
+    return userRole == 'worker' ? '/worker-dashboard' : '/user-dashboard';
+  }
 
   @override
   void initState() {
@@ -161,7 +169,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  context.go('/user-dashboard');
+                  context.go(_targetDashboard);
                 },
                 child: const Text('Back to Home'),
               )
@@ -205,12 +213,13 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         backgroundColor: Colors.green,
       ),
     );
-    context.go('/user-dashboard');
+    context.go(_targetDashboard);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final useGoogleMap = FixenMapView.supportsGoogleMaps;
     
     return Scaffold(
       appBar: AppBar(
@@ -224,17 +233,17 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         children: [
           // Map Background Preview (Simulated GPS coordinate widget)
           GestureDetector(
-            onPanStart: (details) {
+            onPanStart: useGoogleMap ? null : (details) {
               _dragStart = details.localPosition;
             },
-            onPanUpdate: (details) {
+            onPanUpdate: useGoogleMap ? null : (details) {
               if (_dragStart != null) {
                 setState(() {
                   _mapOffset += details.delta;
                 });
               }
             },
-            onPanEnd: (_) {
+            onPanEnd: useGoogleMap ? null : (_) {
               _dragStart = null;
             },
             child: Container(
@@ -242,21 +251,62 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: CustomPaint(
-                      painter: _LiveMapPainter(
-                        isDark: isDark,
-                        userLat: _userLat,
-                        userLng: _userLng,
-                        workerLatOffset: _workerLatOffset,
-                        workerLngOffset: _workerLngOffset,
-                        zoomLevel: _zoomLevel,
-                        status: _lifecycleStatus,
-                        mapOffset: _mapOffset,
-                      ),
+                    child: FixenMapView(
+                      latitude: _userLat,
+                      longitude: _userLng,
+                      zoom: _zoomLevel,
+                      markers: [
+                        if (_lifecycleStatus == 'travelling')
+                          FixenMapMarker(
+                            id: 'active_worker',
+                            label: 'Ch. Venkata Ramana - ETA $_eta mins',
+                            latitude: _userLat + _workerLatOffset,
+                            longitude: _userLng + _workerLngOffset,
+                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                          ),
+                        if (_lifecycleStatus != 'travelling' && _lifecycleStatus != 'paid') ...[
+                          FixenMapMarker(
+                            id: 'nearby_plumber',
+                            label: 'Plumber - 200m',
+                            latitude: _userLat + 0.0018,
+                            longitude: _userLng - 0.0012,
+                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                          ),
+                          FixenMapMarker(
+                            id: 'nearby_carpenter',
+                            label: 'Carpenter - 450m',
+                            latitude: _userLat - 0.0032,
+                            longitude: _userLng + 0.0024,
+                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+                          ),
+                          FixenMapMarker(
+                            id: 'nearby_electrician',
+                            label: 'Electrician - 800m',
+                            latitude: _userLat + 0.0045,
+                            longitude: _userLng + 0.0030,
+                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+                          ),
+                        ],
+                      ],
+                      polylines: _lifecycleStatus == 'travelling'
+                          ? {
+                              Polyline(
+                                polylineId: const PolylineId('worker_route'),
+                                points: [
+                                  LatLng(_userLat + _workerLatOffset, _userLng + _workerLngOffset),
+                                  LatLng(_userLat + (_workerLatOffset / 2), _userLng + 0.003),
+                                  LatLng(_userLat, _userLng),
+                                ],
+                                color: const Color(0xFF10B981),
+                                width: 5,
+                              ),
+                            }
+                          : const {},
                     ),
                   ),
                   
-                  // User Pin Marker at center (shifted by mapOffset)
+                  // Fallback user pin marker for non-mobile platforms.
+                  if (!useGoogleMap)
                   Positioned(
                     left: MediaQuery.of(context).size.width / 2 - 40 + _mapOffset.dx,
                     top: MediaQuery.of(context).size.height / 2 - 50 + _mapOffset.dy,
@@ -281,7 +331,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                   ),
 
                   // Surrounding Workers pins ("around location" shifted by mapOffset)
-                  if (_lifecycleStatus != "travelling" && _lifecycleStatus != "paid") ...[
+                  if (!useGoogleMap && _lifecycleStatus != "travelling" && _lifecycleStatus != "paid") ...[
                     Positioned(
                       left: 80 + _mapOffset.dx,
                       top: 150 + _mapOffset.dy,
@@ -300,7 +350,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                   ],
 
                   // Active travelling worker Pin Marker (shifted by mapOffset)
-                  if (_lifecycleStatus == "travelling")
+                  if (!useGoogleMap && _lifecycleStatus == "travelling")
                     Positioned(
                       left: MediaQuery.of(context).size.width / 2 - 40 + _mapOffset.dx + (MediaQuery.of(context).size.width * 0.3 * (_distance / 3.1)),
                       top: MediaQuery.of(context).size.height / 2 - 30 + _mapOffset.dy + (MediaQuery.of(context).size.height * -0.3 * (_distance / 3.1)),
@@ -426,7 +476,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.go('/user-dashboard');
+              context.go(_targetDashboard);
             },
             child: const Text('Leave'),
           ),
@@ -622,6 +672,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
         );
 
       case "completed":
+        final isWorker = ref.read(authNotifierProvider).user?.role == 'worker';
         return GlassContainer(
           bgGradientColor: isDark ? const Color(0xEC1C2541) : Colors.white,
           child: Column(
@@ -629,11 +680,14 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Job Completed! Ready for Payment',
+                isWorker ? 'Job Completed! Bill Generated' : 'Job Completed! Ready for Payment',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'Outfit', color: Theme.of(context).primaryColor),
               ),
               const SizedBox(height: 4),
-              const Text('Please review the bill and choose your payment method.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                isWorker ? 'The customer has been billed for the service.' : 'Please review the bill and choose your payment method.',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
               const Divider(height: 24),
               
               Row(
@@ -661,29 +715,53 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               ),
               const SizedBox(height: 16),
               
-              // Select Payment Method
-              const Text('Payment Method:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildPaymentRadio("UPI"),
-                  const SizedBox(width: 12),
-                  _buildPaymentRadio("Card"),
-                  const SizedBox(width: 12),
-                  _buildPaymentRadio("Cash"),
-                ],
-              ),
-              const SizedBox(height: 20),
-              PrimaryButton(
-                text: 'Pay ₹450.00',
-                isLoading: _isGeneratingInvoice,
-                onPressed: _processPayment,
-              ),
+              if (isWorker) ...[
+                const Divider(height: 24),
+                Row(
+                  children: const [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Waiting for customer payment...',
+                      style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton(
+                  onPressed: _processPayment,
+                  child: const Text('Dev: Simulate Customer Paid'),
+                ),
+              ] else ...[
+                // Select Payment Method
+                const Text('Payment Method:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildPaymentRadio("UPI"),
+                    const SizedBox(width: 12),
+                    _buildPaymentRadio("Card"),
+                    const SizedBox(width: 12),
+                    _buildPaymentRadio("Cash"),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                PrimaryButton(
+                  text: 'Pay ₹450.00',
+                  isLoading: _isGeneratingInvoice,
+                  onPressed: _processPayment,
+                ),
+              ],
             ],
           ),
         );
 
       case "paid":
+        final isWorker = ref.read(authNotifierProvider).user?.role == 'worker';
         return GlassContainer(
           bgGradientColor: isDark ? const Color(0xEC1C2541) : Colors.white,
           child: Column(
@@ -694,52 +772,59 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                 children: [
                   const Icon(Icons.check_circle_rounded, color: Colors.green, size: 28),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('Payment Successful! Bill Paid.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Expanded(
+                    child: Text(
+                      isWorker ? 'Job Completed & Paid! 🎉' : 'Payment Successful! Bill Paid.',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ),
                 ],
               ),
               const Divider(height: 24),
+              if (!isWorker) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Downloading Invoice PDF...')),
+                          );
+                        },
+                        icon: const Icon(Icons.download_rounded, size: 16),
+                        label: const Text('Download Invoice'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Invoice emailed successfully.')),
+                          );
+                        },
+                        icon: const Icon(Icons.email_outlined, size: 16),
+                        label: const Text('Email Invoice'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
               
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Downloading Invoice PDF...')),
-                        );
-                      },
-                      icon: const Icon(Icons.download_rounded, size: 16),
-                      label: const Text('Download Invoice'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Invoice emailed successfully.')),
-                        );
-                      },
-                      icon: const Icon(Icons.email_outlined, size: 16),
-                      label: const Text('Email Invoice'),
-                    ),
-                  ),
-                ],
+              // Rate technician or customer
+              Text(
+                isWorker ? 'Rate G Bhanu Shankar (Customer):' : 'Rate Rajesh Kumar:',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 20),
-              
-              // Rate technician
-              const Text('Rate Rajesh Kumar:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -761,24 +846,26 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
               const SizedBox(height: 8),
               CustomTextField(
                 controller: _commentController,
-                labelText: 'Write a review (Optional)',
-                hintText: 'Share your experience...',
+                labelText: isWorker ? 'Write customer feedback (Optional)' : 'Write a review (Optional)',
+                hintText: isWorker ? 'Share your experience with this customer...' : 'Share your experience...',
               ),
               const SizedBox(height: 20),
               PrimaryButton(
-                text: 'Submit Feedback',
+                text: isWorker ? 'Submit Rating & Return' : 'Submit Feedback',
                 onPressed: _submitReview,
               ),
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    // Navigate to reporting
-                    _showReportWorkerDialog(context);
-                  },
-                  child: const Text('Report Worker / Dispute Payment', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+              if (!isWorker) ...[
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      // Navigate to reporting
+                      _showReportWorkerDialog(context);
+                    },
+                    child: const Text('Report Worker / Dispute Payment', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         );
@@ -849,7 +936,7 @@ class _LiveTrackingPageState extends State<LiveTrackingPage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Dispute Report submitted to FIXEN Office.')),
                 );
-                context.go('/user-dashboard');
+                context.go(_targetDashboard);
               },
               child: const Text('Submit Dispute'),
             ),

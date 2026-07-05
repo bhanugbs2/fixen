@@ -41,7 +41,9 @@ class AuthRepositoryImpl implements AuthRepository {
       if (e is ServerException) rethrow;
       // Fallback for simulation/testing if connection fails or status is not 200
       if (email.contains("mock") || email == "user@fixen.com" || email == "bhanushankargbs@gmail.com" || email == "admin@fixen.com") {
-        return _getMockUser(email, email == "admin@fixen.com" ? "admin" : "user");
+        final mockUser = _getMockUser(email, email == "admin@fixen.com" ? "admin" : "user");
+        await _saveMockSession(mockUser);
+        return mockUser;
       }
       throw ServerException(message: 'Authentication failed. Please check your credentials.');
     }
@@ -62,7 +64,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
-      return _getMockUser('${provider}_user@fixen.com', 'user');
+      final mockUser = _getMockUser('${provider.toLowerCase()}_user@fixen.com', 'user');
+      await _saveMockSession(mockUser);
+      return mockUser;
     }
   }
 
@@ -202,7 +206,9 @@ class AuthRepositoryImpl implements AuthRepository {
       return user;
     } catch (e) {
       if (email == "admin@fixen.com" && password == "admin123") {
-        return _getMockUser(email, 'admin');
+        final mockUser = _getMockUser(email, 'admin');
+        await _saveMockSession(mockUser);
+        return mockUser;
       }
       throw ServerException(message: 'Admin authorization failed.');
     }
@@ -264,6 +270,12 @@ class AuthRepositoryImpl implements AuthRepository {
         role: 'user',
       );
     }
+  }
+
+  Future<void> _saveMockSession(UserModel user) async {
+    await _secureStorage.saveTokens(accessToken: 'mock_access_token', refreshToken: 'mock_refresh_token');
+    await _secureStorage.saveUserRole(user.role);
+    await HiveHelper.cacheData(HiveHelper.profileBoxName, 'current_user', user.toJson());
   }
 
   @override
