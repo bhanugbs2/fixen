@@ -251,58 +251,71 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: FixenMapView(
-                      latitude: _userLat,
-                      longitude: _userLng,
-                      zoom: _zoomLevel,
-                      markers: [
-                        if (_lifecycleStatus == 'travelling')
-                          FixenMapMarker(
-                            id: 'active_worker',
-                            label: 'Ch. Venkata Ramana - ETA $_eta mins',
-                            latitude: _userLat + _workerLatOffset,
-                            longitude: _userLng + _workerLngOffset,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                    child: useGoogleMap
+                        ? FixenMapView(
+                            latitude: _userLat,
+                            longitude: _userLng,
+                            zoom: _zoomLevel,
+                            markers: [
+                              if (_lifecycleStatus == 'travelling')
+                                FixenMapMarker(
+                                  id: 'active_worker',
+                                  label: 'Ch. Venkata Ramana - ETA $_eta mins',
+                                  latitude: _userLat + _workerLatOffset,
+                                  longitude: _userLng + _workerLngOffset,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                                ),
+                              if (_lifecycleStatus != 'travelling' && _lifecycleStatus != 'paid') ...[
+                                FixenMapMarker(
+                                  id: 'nearby_plumber',
+                                  label: 'Plumber - 200m',
+                                  latitude: _userLat + 0.0018,
+                                  longitude: _userLng - 0.0012,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                                ),
+                                FixenMapMarker(
+                                  id: 'nearby_carpenter',
+                                  label: 'Carpenter - 450m',
+                                  latitude: _userLat - 0.0032,
+                                  longitude: _userLng + 0.0024,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+                                ),
+                                FixenMapMarker(
+                                  id: 'nearby_electrician',
+                                  label: 'Electrician - 800m',
+                                  latitude: _userLat + 0.0045,
+                                  longitude: _userLng + 0.0030,
+                                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+                                ),
+                              ],
+                            ],
+                            polylines: _lifecycleStatus == 'travelling'
+                                ? {
+                                    Polyline(
+                                      polylineId: const PolylineId('worker_route'),
+                                      points: [
+                                        LatLng(_userLat + _workerLatOffset, _userLng + _workerLngOffset),
+                                        LatLng(_userLat + (_workerLatOffset / 2), _userLng + 0.003),
+                                        LatLng(_userLat, _userLng),
+                                      ],
+                                      color: const Color(0xFF10B981),
+                                      width: 5,
+                                    ),
+                                  }
+                                : const {},
+                          )
+                        : CustomPaint(
+                            painter: _LiveMapPainter(
+                              isDark: isDark,
+                              userLat: _userLat,
+                              userLng: _userLng,
+                              workerLatOffset: _workerLatOffset,
+                              workerLngOffset: _workerLngOffset,
+                              zoomLevel: _zoomLevel,
+                              status: _lifecycleStatus,
+                              mapOffset: _mapOffset,
+                            ),
                           ),
-                        if (_lifecycleStatus != 'travelling' && _lifecycleStatus != 'paid') ...[
-                          FixenMapMarker(
-                            id: 'nearby_plumber',
-                            label: 'Plumber - 200m',
-                            latitude: _userLat + 0.0018,
-                            longitude: _userLng - 0.0012,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-                          ),
-                          FixenMapMarker(
-                            id: 'nearby_carpenter',
-                            label: 'Carpenter - 450m',
-                            latitude: _userLat - 0.0032,
-                            longitude: _userLng + 0.0024,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
-                          ),
-                          FixenMapMarker(
-                            id: 'nearby_electrician',
-                            label: 'Electrician - 800m',
-                            latitude: _userLat + 0.0045,
-                            longitude: _userLng + 0.0030,
-                            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-                          ),
-                        ],
-                      ],
-                      polylines: _lifecycleStatus == 'travelling'
-                          ? {
-                              Polyline(
-                                polylineId: const PolylineId('worker_route'),
-                                points: [
-                                  LatLng(_userLat + _workerLatOffset, _userLng + _workerLngOffset),
-                                  LatLng(_userLat + (_workerLatOffset / 2), _userLng + 0.003),
-                                  LatLng(_userLat, _userLng),
-                                ],
-                                color: const Color(0xFF10B981),
-                                width: 5,
-                              ),
-                            }
-                          : const {},
-                    ),
                   ),
                   
                   // Fallback user pin marker for non-mobile platforms.
