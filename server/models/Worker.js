@@ -40,8 +40,11 @@ const WorkerSchema = new mongoose.Schema({
   },
   governmentId: {
     type: String,
-    required: [true, 'Please add government ID (e.g. W12345)'],
-    unique: true
+    default: ''
+  },
+  tempOtp: {
+    type: String,
+    default: ''
   },
   aadhaarCard: {
     type: String,
@@ -83,6 +86,10 @@ const WorkerSchema = new mongoose.Schema({
   isBusy: {
     type: Boolean,
     default: false
+  },
+  monthlyEarnings: {
+    type: Number,
+    default: 0.0
   },
   commissionDue: {
     type: Number,

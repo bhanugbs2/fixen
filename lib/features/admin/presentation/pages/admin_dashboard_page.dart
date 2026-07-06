@@ -20,7 +20,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
       'name': 'Rahul Verma',
       'service': 'Electrician',
       'phone': '+919988776655',
-      'govId': 'GOV-E-45892',
       'experience': 5,
     },
     {
@@ -28,7 +27,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
       'name': 'Subhash Pal',
       'service': 'Carpenter',
       'phone': '+918877665544',
-      'govId': 'GOV-C-89745',
       'experience': 8,
     }
   ];
@@ -278,7 +276,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> with SingleTick
               ),
               const Divider(height: 24),
               Text('•  Phone: ${worker['phone']}', style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.5)),
-              Text('•  Government ID: ${worker['govId']}', style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.5)),
               Text('•  Experience Claimed: ${worker['experience']} years', style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.5)),
               const SizedBox(height: 20),
               Row(

@@ -119,14 +119,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(selectedWorkerCategory: category);
   }
 
-  Future<void> requestWorkerLogin(String governmentId) async {
+  Future<void> requestWorkerLogin(String mobileNumber) async {
     state = state.copyWith(status: AuthStatus.loading);
     try {
-      final mobile = await _repository.workerLogin(governmentId: governmentId);
+      final mobile = await _repository.workerLogin(mobileNumber: mobileNumber);
       state = state.copyWith(
         status: AuthStatus.otpRequired,
         verificationMobileNumber: mobile,
-        pendingWorkerId: governmentId,
+        pendingWorkerId: mobileNumber,
       );
     } catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
@@ -135,12 +135,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> verifyWorkerOtp(String otp) async {
     if (state.pendingWorkerId == null) return false;
-    final workerId = state.pendingWorkerId!;
+    final mobileNumber = state.pendingWorkerId!;
     final category = state.selectedWorkerCategory;
     state = state.copyWith(status: AuthStatus.loading);
     try {
       final user = await _repository.verifyWorkerOtp(
-        governmentId: workerId,
+        mobileNumber: mobileNumber,
         otp: otp,
         category: category,
       );

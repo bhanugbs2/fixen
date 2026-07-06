@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/config/env/env_config.dart';
 
 class SocketService {
@@ -69,3 +70,7 @@ class SocketService {
     }
   }
 }
+
+final socketServiceProvider = Provider<SocketService>((ref) {
+  return SocketService();
+});

@@ -81,7 +81,9 @@ final GoRouter appRouter = GoRouter(
       path: '/live-tracking/:bookingId',
       builder: (context, state) {
         final bookingId = state.pathParameters['bookingId'] ?? 'mock_booking';
-        return LiveTrackingPage(bookingId: bookingId);
+        final priceStr = state.uri.queryParameters['price'];
+        final double price = double.tryParse(priceStr ?? '') ?? 450.0;
+        return LiveTrackingPage(bookingId: bookingId, price: price);
       },
     ),
     GoRoute(

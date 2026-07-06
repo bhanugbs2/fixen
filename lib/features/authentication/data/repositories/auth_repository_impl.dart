@@ -38,14 +38,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
-      if (e is ServerException) rethrow;
-      // Fallback for simulation/testing if connection fails or status is not 200
-      if (email.contains("mock") || email == "user@fixen.com" || email == "bhanushankargbs@gmail.com" || email == "admin@fixen.com") {
-        final mockUser = _getMockUser(email, email == "admin@fixen.com" ? "admin" : "user");
-        await _saveMockSession(mockUser);
-        return mockUser;
+      if (e is DioException && e.response != null) {
+        throw ServerException(message: e.response?.data['message'] ?? 'Authentication failed.');
       }
-      throw ServerException(message: 'Authentication failed. Please check your credentials.');
+      throw ServerException(message: 'Authentication connection failed.');
     }
   }
 
@@ -64,9 +60,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
-      final mockUser = _getMockUser('${provider.toLowerCase()}_user@fixen.com', 'user');
-      await _saveMockSession(mockUser);
-      return mockUser;
+      if (e is DioException && e.response != null) {
+        throw ServerException(message: e.response?.data['message'] ?? 'Social login failed.');
+      }
+      throw ServerException(message: 'Social login connection failed.');
     }
   }
 
@@ -101,47 +98,37 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
-      final mockUser = UserModel(
-        id: 'user_mock_123',
-        name: name,
-        email: email,
-        mobileNumber: mobileNumber,
-        address: address,
-        profileImage: '',
-        role: 'user',
-      );
-      await _secureStorage.saveTokens(accessToken: 'mock_access_token', refreshToken: 'mock_refresh_token');
-      await _secureStorage.saveUserRole('user');
-      await HiveHelper.cacheData(HiveHelper.profileBoxName, 'current_user', mockUser.toJson());
-      return mockUser;
+      if (e is DioException && e.response != null) {
+        throw ServerException(message: e.response?.data['message'] ?? 'Registration failed.');
+      }
+      throw ServerException(message: 'Registration connection failed.');
     }
   }
 
   @override
-  Future<String> workerLogin({required String governmentId}) async {
+  Future<String> workerLogin({required String mobileNumber}) async {
     try {
       final response = await _apiClient.post('/auth/worker-login', data: {
-        'governmentId': governmentId,
+        'mobileNumber': mobileNumber,
       });
       return response.data['mobileNumber'] ?? '';
     } catch (e) {
-      // Mock worker logins
-      if (governmentId == "W12345" || governmentId == "worker" || governmentId == "W_NEW" || governmentId == "new") {
-        return "+919876543210";
+      if (e is DioException && e.response != null) {
+        throw ServerException(message: e.response?.data['message'] ?? 'Worker login failed.');
       }
-      throw ServerException(message: 'Government ID not verified in FIXEN database.');
+      throw ServerException(message: 'Worker verification connection failed.');
     }
   }
 
   @override
   Future<UserModel> verifyWorkerOtp({
-    required String governmentId,
+    required String mobileNumber,
     required String otp,
     String? category,
   }) async {
     try {
       final response = await _apiClient.post('/auth/verify-otp', data: {
-        'governmentId': governmentId,
+        'mobileNumber': mobileNumber,
         'otp': otp,
       });
 
@@ -156,33 +143,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
-      if (otp == "123456") {
-        final mockWorker = UserModel(
-          id: 'worker_mock_123',
-          name: 'Ch. Venkata Ramana',
-          email: 'ramana@fixen.com',
-          mobileNumber: '+919876543210',
-          address: 'Arundelpet, Guntur, Andhra Pradesh',
-          profileImage: '',
-          role: 'worker',
-          governmentId: governmentId,
-          verificationStatus: 'approved',
-          experience: 8,
-          languages: ['Hindi', 'English', 'Kannada'],
-          workingHours: '9:00 AM - 6:00 PM',
-          rating: 4.8,
-          reviewCount: 34,
-          isOnline: true,
-          commissionDue: 0.0,
-          isBlocked: false,
-          service: (governmentId == 'W_NEW' || governmentId == 'new') ? null : (category ?? 'Plumber'),
-        );
-        await _secureStorage.saveTokens(accessToken: 'mock_worker_token', refreshToken: 'mock_worker_refresh');
-        await _secureStorage.saveUserRole('worker');
-        await HiveHelper.cacheData(HiveHelper.profileBoxName, 'current_user', mockWorker.toJson());
-        return mockWorker;
+      if (e is DioException && e.response != null) {
+        throw ServerException(message: e.response?.data['message'] ?? 'Incorrect OTP. Verification failed.');
       }
-      throw ServerException(message: 'Incorrect OTP. Verification failed.');
+      throw ServerException(message: 'OTP verification connection failed.');
     }
   }
 

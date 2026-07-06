@@ -86,7 +86,7 @@ exports.toggleBusy = async (req, res, next) => {
   }
 };
 
-// @desc    Get Worker Commission & Weekly Earnings
+// @desc    Get Worker Commission & Monthly Earnings
 // @route   GET /api/v1/workers/commission
 // @access  Private (Worker)
 exports.getCommissionStatus = async (req, res, next) => {
@@ -105,7 +105,7 @@ exports.getCommissionStatus = async (req, res, next) => {
     const commissionData = {
       id: worker.id,
       name: worker.name,
-      weeklyEarnings: worker.weeklyEarnings || 0,
+      monthlyEarnings: worker.monthlyEarnings || 0,
       commissionDue: worker.commissionDue || 0,
       isBlocked: worker.isBlocked || false,
       history: logs
@@ -113,7 +113,7 @@ exports.getCommissionStatus = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Weekly commission status retrieved',
+      message: 'Monthly commission status retrieved',
       ...commissionData,
       data: commissionData
     });

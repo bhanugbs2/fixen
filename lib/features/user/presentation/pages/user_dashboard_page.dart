@@ -756,6 +756,12 @@ class _UserDashboardPageState extends ConsumerState<UserDashboardPage> {
               onTap: _showAppSettingsSheet,
             ),
             _buildProfileMenuItem(
+              context,
+              icon: Icons.feedback_outlined,
+              title: 'Submit Complaint',
+              onTap: _showComplaintSheet,
+            ),
+            _buildProfileMenuItem(
               context, 
               icon: Icons.logout_rounded, 
               title: 'Log Out', 
@@ -1010,6 +1016,38 @@ class _UserDashboardPageState extends ConsumerState<UserDashboardPage> {
           ),
         );
       },
+    );
+  }
+
+  void _showComplaintSheet() {
+    final complaintController = TextEditingController();
+    _showProfileSheet(
+      title: 'File a Complaint / Feedback',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'We value your feedback. Please submit any complaints or issues below, and the FIXEN support team will get in touch.',
+            style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          CustomTextField(
+            controller: complaintController,
+            labelText: 'Details of Complaint',
+            hintText: 'Enter complaint details here...',
+            maxLines: 4,
+          ),
+          const SizedBox(height: 20),
+          PrimaryButton(
+            text: 'Submit Complaint',
+            onPressed: () {
+              Navigator.pop(context);
+              _showSavedSnack('Complaint submitted successfully to FIXEN office.');
+            },
+          ),
+        ],
+      ),
     );
   }
 

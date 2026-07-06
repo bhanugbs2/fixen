@@ -126,11 +126,6 @@ exports.workerRegister = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email already registered', data: null });
     }
 
-    let checkGov = await Worker.findOne({ governmentId });
-    if (checkGov) {
-      return res.status(400).json({ success: false, message: 'Government ID already registered', data: null });
-    }
-
     // Extract uploaded files
     const profileImage = req.files?.profileImage ? `/uploads/${req.files.profileImage[0].filename}` : '';
     const aadhaarCard = req.files?.aadhaarCard ? `/uploads/${req.files.aadhaarCard[0].filename}` : '';
@@ -167,18 +162,15 @@ exports.workerRegister = async (req, res, next) => {
   }
 };
 
-// @desc    Worker login request (check governmentId, return mobileNumber)
-// @route   POST /api/v1/auth/worker-login
-// @access  Public
 exports.workerLogin = async (req, res, next) => {
   try {
-    const { governmentId } = req.body;
+    const { mobileNumber } = req.body;
 
-    const worker = await Worker.findOne({ governmentId });
+    const worker = await Worker.findOne({ mobileNumber });
     if (!worker) {
       return res.status(404).json({
         success: false,
-        message: 'Government ID not verified in FIXEN database.',
+        message: 'Mobile number not registered in FIXEN database.',
         data: null
       });
     }
@@ -191,13 +183,22 @@ exports.workerLogin = async (req, res, next) => {
       });
     }
 
-    // Response structure where mobileNumber is at root level for the api client
+    // Generate a random 6-digit OTP code and save it
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    worker.tempOtp = otp;
+    await worker.save();
+
+    console.log(`[Worker OTP Dispatched] Mobile: ${mobileNumber} -> OTP: ${otp}`);
+
+    // Return the mobile number and generated OTP for development/testing ease
     return res.status(200).json({
       success: true,
       message: 'OTP sent successfully to registered mobile number',
       mobileNumber: worker.mobileNumber,
+      otp: otp,
       data: {
-        mobileNumber: worker.mobileNumber
+        mobileNumber: worker.mobileNumber,
+        otp: otp
       }
     });
   } catch (err) {
@@ -205,23 +206,11 @@ exports.workerLogin = async (req, res, next) => {
   }
 };
 
-// @desc    Worker Verify OTP
-// @route   POST /api/v1/auth/verify-otp
-// @access  Public
 exports.verifyWorkerOtp = async (req, res, next) => {
   try {
-    const { governmentId, otp } = req.body;
+    const { mobileNumber, otp } = req.body;
 
-    // Simulate OTP validation: accept 123456
-    if (otp !== '123456') {
-      return res.status(400).json({
-        success: false,
-        message: 'Incorrect OTP. Verification failed.',
-        data: null
-      });
-    }
-
-    const worker = await Worker.findOne({ governmentId });
+    const worker = await Worker.findOne({ mobileNumber });
     if (!worker) {
       return res.status(404).json({
         success: false,
@@ -229,6 +218,19 @@ exports.verifyWorkerOtp = async (req, res, next) => {
         data: null
       });
     }
+
+    // Check tempOtp
+    if (!worker.tempOtp || worker.tempOtp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Incorrect OTP. Verification failed.',
+        data: null
+      });
+    }
+
+    // Clear tempOtp after verification
+    worker.tempOtp = '';
+    await worker.save();
 
     const tokens = generateTokens(worker);
     return sendAuthResponse(res, 200, true, 'OTP verified successfully', worker, tokens);

@@ -37,7 +37,6 @@ const workerRegisterRules = [
   body('email').trim().isEmail().withMessage('Please enter a valid email address'),
   body('mobileNumber').trim().notEmpty().withMessage('Mobile number is required'),
   body('address').trim().notEmpty().withMessage('Address is required'),
-  body('governmentId').trim().notEmpty().withMessage('Government ID is required'),
   body('service')
     .isIn(['Electrician', 'Plumber', 'Carpenter'])
     .withMessage('Service category must be Electrician, Plumber, or Carpenter'),
@@ -61,12 +60,12 @@ const workerRegisterRules = [
 
 // Worker Login rules
 const workerLoginRules = [
-  body('governmentId').trim().notEmpty().withMessage('Government ID is required')
+  body('mobileNumber').trim().notEmpty().withMessage('Mobile number is required')
 ];
 
 // Worker OTP Verification rules
 const verifyOtpRules = [
-  body('governmentId').trim().notEmpty().withMessage('Government ID is required'),
+  body('mobileNumber').trim().notEmpty().withMessage('Mobile number is required'),
   body('otp').trim().isLength({ min: 6, max: 6 }).withMessage('OTP must be exactly 6 digits')
 ];
 

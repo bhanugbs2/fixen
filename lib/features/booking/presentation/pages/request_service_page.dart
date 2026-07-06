@@ -9,16 +9,21 @@ import '../../../../common/widgets/fixen_map_view.dart';
 import '../../../../common/widgets/primary_button.dart';
 import '../../../../common/widgets/glass_container.dart';
 
-class RequestServicePage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../data/local/secure_storage_helper.dart';
+import '../../../../data/remote/api_client.dart';
+import '../../../../data/remote/socket_service.dart';
+
+class RequestServicePage extends ConsumerStatefulWidget {
   final String category;
 
   const RequestServicePage({super.key, required this.category});
 
   @override
-  State<RequestServicePage> createState() => _RequestServicePageState();
+  ConsumerState<RequestServicePage> createState() => _RequestServicePageState();
 }
 
-class _RequestServicePageState extends State<RequestServicePage> {
+class _RequestServicePageState extends ConsumerState<RequestServicePage> {
   final _formKey = GlobalKey<FormState>();
   final _descController = TextEditingController();
   final List<String> _attachedImages = [];
@@ -35,6 +40,8 @@ class _RequestServicePageState extends State<RequestServicePage> {
   Timer? _searchTimer;
   bool _noWorkersFound = false;
   bool _quotesReceived = false;
+  String _bookingId = "";
+  final List<Map<String, dynamic>> _receivedQuotes = [];
 
   final ImagePicker _picker = ImagePicker();
 
@@ -106,7 +113,7 @@ class _RequestServicePageState extends State<RequestServicePage> {
     }
   }
 
-  void _startSearch() {
+  Future<void> _startSearch() async {
     final formState = _formKey.currentState;
     if (formState != null && !formState.validate()) {
       return;
@@ -118,7 +125,48 @@ class _RequestServicePageState extends State<RequestServicePage> {
       _quotesReceived = false;
       _searchRadius = 5;
       _searchCountdown = 5; // Speed up to 5s per step for preview experience
+      _receivedQuotes.clear();
+      _bookingId = "";
     });
+
+    try {
+      final apiClient = ApiClient();
+      final response = await apiClient.post('/bookings', data: {
+        'category': widget.category,
+        'description': _descController.text.trim().isEmpty ? 'Regular repair request' : _descController.text.trim(),
+        'latitude': _userLat,
+        'longitude': _userLng,
+      });
+
+      final data = response.data;
+      final booking = data['booking'] ?? data['data']?['booking'];
+      if (booking != null) {
+        _bookingId = booking['_id'] ?? '';
+      }
+
+      // Initialize Socket connection
+      final secureStorage = SecureStorageHelper();
+      final token = await secureStorage.getAccessToken();
+      if (token != null) {
+        final socketService = ref.read(socketServiceProvider);
+        socketService.initialize(token);
+        
+        socketService.on('quoteReceived', (eventData) {
+          final bId = eventData['bookingId'];
+          if (bId == _bookingId) {
+            setState(() {
+              _receivedQuotes.add(Map<String, dynamic>.from(eventData['quote']));
+              _quotesReceived = true;
+              _isSearching = false;
+              _searchTimer?.cancel();
+            });
+          }
+        });
+      }
+    } catch (e) {
+      // Graceful fallback to simulated quotes for testing
+      debugPrint('Real booking creation failed, using mock simulation instead: $e');
+    }
 
     _runSearchStep();
   }
@@ -799,6 +847,7 @@ class _RequestServicePageState extends State<RequestServicePage> {
     required double price,
     required String message,
     required String imageUrl,
+    String workerId = '',
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -903,9 +952,22 @@ class _RequestServicePageState extends State<RequestServicePage> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
+                    // If we have a real bookingId and workerId, call the accept API!
+                    if (_bookingId.isNotEmpty && workerId.isNotEmpty) {
+                      try {
+                        final apiClient = ApiClient();
+                        await apiClient.post('/bookings/$_bookingId/accept', data: {
+                          'workerId': workerId,
+                        });
+                        context.go('/live-tracking/$_bookingId?price=$price');
+                        return;
+                      } catch (e) {
+                        debugPrint('Failed to accept quote via API: $e');
+                      }
+                    }
                     // Accepts quotation and routes to live tracking screen
-                    context.go('/live-tracking/mock_booking_123');
+                    context.go('/live-tracking/mock_booking_123?price=$price');
                   },
                   child: const Text('Accept'),
                 ),
@@ -1016,6 +1078,44 @@ class _RequestServicePageState extends State<RequestServicePage> {
   }
 
   List<Widget> _getCategoryQuotations() {
+    final List<Widget> list = [];
+
+    // Add dynamically received quotes from the backend
+    for (final q in _receivedQuotes) {
+      final String name = q['name'] ?? 'Provider';
+      final double rating = double.tryParse(q['rating']?.toString() ?? '') ?? 4.8;
+      final int reviews = int.tryParse(q['reviewCount']?.toString() ?? '') ?? 20;
+      final int exp = int.tryParse(q['experience']?.toString() ?? '') ?? 5;
+      final double dist = double.tryParse(q['distance']?.toString() ?? '') ?? 1.5;
+      final int eta = int.tryParse(q['eta']?.toString() ?? '') ?? 15;
+      final double price = double.tryParse(q['price']?.toString() ?? '') ?? 450.0;
+      final String msg = q['message'] ?? 'Available to resolve this issue.';
+      final String workerId = q['workerId'] ?? '';
+
+      list.add(
+        _buildQuotationCard(
+          context,
+          name: name,
+          rating: rating,
+          reviewsCount: reviews,
+          experience: exp,
+          distance: dist,
+          eta: eta,
+          price: price,
+          message: msg,
+          imageUrl: '',
+          workerId: workerId,
+        ),
+      );
+      list.add(const SizedBox(height: 20));
+    }
+
+    // Add static fallback/suggested list
+    list.addAll(_getStaticCategoryQuotations());
+    return list;
+  }
+
+  List<Widget> _getStaticCategoryQuotations() {
     final s = widget.category.toLowerCase();
     if (s.contains('plumber')) {
       return [

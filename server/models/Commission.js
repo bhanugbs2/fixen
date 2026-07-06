@@ -10,7 +10,7 @@ const CommissionSchema = new mongoose.Schema({
     type: Number,
     required: true // 10% of earnings
   },
-  weeklyEarnings: {
+  monthlyEarnings: {
     type: Number,
     required: true
   },

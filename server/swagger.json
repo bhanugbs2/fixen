@@ -73,16 +73,16 @@
     },
     "/auth/worker-login": {
       "post": {
-        "summary": "Worker login initiation by Government ID",
+        "summary": "Request Worker login OTP using registered mobile number",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["governmentId"],
+                "required": ["mobileNumber"],
                 "properties": {
-                  "governmentId": { "type": "string" }
+                  "mobileNumber": { "type": "string" }
                 }
               }
             }
@@ -102,9 +102,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["governmentId", "otp"],
+                "required": ["mobileNumber", "otp"],
                 "properties": {
-                  "governmentId": { "type": "string" },
+                  "mobileNumber": { "type": "string" },
                   "otp": { "type": "string", "example": "123456" }
                 }
               }
@@ -196,7 +196,7 @@
     },
     "/workers/commission": {
       "get": {
-        "summary": "Fetch worker pending commission logs and weekly earnings",
+        "summary": "Fetch worker pending commission logs and monthly earnings",
         "security": [{ "BearerAuth": [] }],
         "responses": {
           "200": { "description": "Commission statistics retrieved" }

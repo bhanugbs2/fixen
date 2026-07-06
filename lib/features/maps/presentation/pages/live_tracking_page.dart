@@ -13,8 +13,9 @@ import '../../../authentication/presentation/providers/auth_provider.dart';
 
 class LiveTrackingPage extends ConsumerStatefulWidget {
   final String bookingId;
+  final double price;
 
-  const LiveTrackingPage({super.key, required this.bookingId});
+  const LiveTrackingPage({super.key, required this.bookingId, this.price = 450.0});
 
   @override
   ConsumerState<LiveTrackingPage> createState() => _LiveTrackingPageState();
@@ -35,9 +36,10 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
   Timer? _movementTimer;
   double _workerLatOffset = 0.015;
   double _workerLngOffset = 0.015;
+  double _progress = 1.0;
 
   // OTP details
-  final String _generatedOtp = "7482"; // Random OTP shown to customer
+  late final String _generatedOtp;
   final _otpInputController = TextEditingController();
   int _otpAttempts = 5;
 
@@ -65,6 +67,8 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
   @override
   void initState() {
     super.initState();
+    // Generate a random 4-digit OTP code
+    _generatedOtp = (1000 + DateTime.now().millisecond % 9000).toString();
     _startMovementSimulation();
     _fetchLiveLocation();
   }
@@ -121,21 +125,44 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
     super.dispose();
   }
 
+  void _updateDistanceAndEta() {
+    final workerLat = _userLat + _workerLatOffset;
+    final workerLng = _userLng + _workerLngOffset;
+    final distanceInMeters = Geolocator.distanceBetween(_userLat, _userLng, workerLat, workerLng);
+    setState(() {
+      _distance = distanceInMeters / 1000.0;
+      _eta = (_distance / 25.0 * 60.0).round();
+      if (_eta < 1 && _distance > 0.05) _eta = 1;
+    });
+  }
+
+  LatLng _getWorkerLatLng() {
+    if (_progress > 0.5) {
+      final factor = (_progress - 0.5) / 0.5;
+      return LatLng(_userLat + 0.015 * factor, _userLng + 0.015);
+    } else {
+      final factor = _progress / 0.5;
+      return LatLng(_userLat, _userLng + 0.015 * factor);
+    }
+  }
+
   void _startMovementSimulation() {
     _movementTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       if (_lifecycleStatus == "travelling") {
         setState(() {
-          if (_distance > 0.3) {
-            _distance -= 0.6;
-            _eta -= 2;
-            if (_eta < 1) _eta = 1;
-            // Simulated coordinates moving closer to center
-            _workerLatOffset *= 0.7;
-            _workerLngOffset *= 0.7;
+          if (_progress > 0.05) {
+            _progress -= 0.1;
+            final nextPos = _getWorkerLatLng();
+            _workerLatOffset = nextPos.latitude - _userLat;
+            _workerLngOffset = nextPos.longitude - _userLng;
+            _updateDistanceAndEta();
           } else {
+            _progress = 0.0;
             _distance = 0.0;
             _eta = 0;
             _lifecycleStatus = "arrived";
+            _workerLatOffset = 0.0;
+            _workerLngOffset = 0.0;
             timer.cancel();
           }
         });
@@ -295,7 +322,8 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
                                       polylineId: const PolylineId('worker_route'),
                                       points: [
                                         LatLng(_userLat + _workerLatOffset, _userLng + _workerLngOffset),
-                                        LatLng(_userLat + (_workerLatOffset / 2), _userLng + 0.003),
+                                        if (_distance / 3.1 > 0.5)
+                                          LatLng(_userLat + 0.015, _userLng),
                                         LatLng(_userLat, _userLng),
                                       ],
                                       color: const Color(0xFF10B981),
@@ -348,25 +376,41 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
                     Positioned(
                       left: 80 + _mapOffset.dx,
                       top: 150 + _mapOffset.dy,
-                      child: _buildAroundMarker(context, icon: Icons.plumbing_rounded, color: Colors.blue, label: 'Plumber (200m)'),
+                      child: _buildAroundMarker(
+                        context,
+                        icon: Icons.plumbing_rounded,
+                        color: const Color(0xFF2563EB), // Plumber Blue
+                        label: 'Plumber (200m)',
+                      ),
                     ),
                     Positioned(
                       right: 70 - _mapOffset.dx,
                       bottom: 250 - _mapOffset.dy,
-                      child: _buildAroundMarker(context, icon: Icons.construction_rounded, color: Colors.green, label: 'Carpenter (450m)'),
+                      child: _buildAroundMarker(
+                        context,
+                        icon: Icons.construction_rounded,
+                        color: const Color(0xFF8B5A2B), // Carpenter Wooden Brown
+                        label: 'Carpenter (450m)',
+                        topCircle: true, // Circle symbol at the top!
+                      ),
                     ),
                     Positioned(
                       left: 90 + _mapOffset.dx,
                       bottom: 180 - _mapOffset.dy,
-                      child: _buildAroundMarker(context, icon: Icons.electric_bolt_rounded, color: Colors.amber, label: 'Electrician (800m)'),
+                      child: _buildAroundMarker(
+                        context,
+                        icon: Icons.electric_bolt_rounded,
+                        color: const Color(0xFFEAB308), // Electrician Yellow
+                        label: 'Electrician (800m)',
+                      ),
                     ),
                   ],
 
                   // Active travelling worker Pin Marker (shifted by mapOffset)
                   if (!useGoogleMap && _lifecycleStatus == "travelling")
                     Positioned(
-                      left: MediaQuery.of(context).size.width / 2 - 40 + _mapOffset.dx + (MediaQuery.of(context).size.width * 0.3 * (_distance / 3.1)),
-                      top: MediaQuery.of(context).size.height / 2 - 30 + _mapOffset.dy + (MediaQuery.of(context).size.height * -0.3 * (_distance / 3.1)),
+                      left: MediaQuery.of(context).size.width / 2 - 40 + _mapOffset.dx + (MediaQuery.of(context).size.width * 0.3 * (_workerLatOffset / 0.015)),
+                      top: MediaQuery.of(context).size.height / 2 - 30 + _mapOffset.dy + (MediaQuery.of(context).size.height * -0.3 * (_workerLngOffset / 0.015)),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -580,6 +624,7 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
         );
 
       case "arrived":
+        final isWorker = ref.read(authNotifierProvider).user?.role == 'worker';
         return GlassContainer(
           bgGradientColor: isDark ? const Color(0xEC1C2541) : Colors.white,
           child: Column(
@@ -603,43 +648,44 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
               ),
               const Divider(height: 24),
               
-              // Customer-side view (displays random OTP)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.amber.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              if (!isWorker) ...[
+                // Customer-side view (displays random OTP)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: Colors.amber.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Share this OTP with worker:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text(
+                        _generatedOtp,
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 3, color: Theme.of(context).primaryColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // Worker-side view (accepts OTP input)
+                const Text('Worker verification console:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                const SizedBox(height: 8),
+                Row(
                   children: [
-                    const Text('Share this OTP with worker:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    Text(
-                      _generatedOtp,
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 3, color: Theme.of(context).primaryColor),
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _otpInputController,
+                        labelText: 'Enter 4-Digit OTP',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    PrimaryButton(
+                      text: 'Verify',
+                      width: 90,
+                      onPressed: _verifyOtpCode,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Worker-side view (accepts OTP input)
-              const Text('Worker verification console:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _otpInputController,
-                      labelText: 'Enter 4-Digit OTP',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  PrimaryButton(
-                    text: 'Verify',
-                    width: 90,
-                    onPressed: _verifyOtpCode,
-                  ),
-                ],
-              ),
+              ],
             ],
           ),
         );
@@ -705,25 +751,9 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
               
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text('Diagnostics & Pipe Repair:', style: TextStyle(fontSize: 13)),
-                  Text('₹299.00', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text('Material Spares (Pipe elbow joint):', style: TextStyle(fontSize: 13)),
-                  Text('₹151.00', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const Divider(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text('Total Amount Due:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text('₹450.00', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.amber)),
+                children: [
+                  const Text('Service Price:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text('₹${widget.price.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.amber)),
                 ],
               ),
               const SizedBox(height: 16),
@@ -764,7 +794,7 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
                 ),
                 const SizedBox(height: 20),
                 PrimaryButton(
-                  text: 'Pay ₹450.00',
+                  text: 'Pay ₹${widget.price.toStringAsFixed(2)}',
                   isLoading: _isGeneratingInvoice,
                   onPressed: _processPayment,
                 ),
@@ -867,18 +897,19 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
                 text: isWorker ? 'Submit Rating & Return' : 'Submit Feedback',
                 onPressed: _submitReview,
               ),
-              if (!isWorker) ...[
-                const SizedBox(height: 8),
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      // Navigate to reporting
-                      _showReportWorkerDialog(context);
-                    },
-                    child: const Text('Report Worker / Dispute Payment', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+              const SizedBox(height: 8),
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    // Navigate to reporting
+                    _showReportWorkerDialog(context);
+                  },
+                  child: Text(
+                    isWorker ? 'File Dispute / Report Customer' : 'Report Worker / Dispute Payment',
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         );
@@ -920,6 +951,7 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
   }
 
   void _showReportWorkerDialog(BuildContext context) {
+    final isWorker = ref.read(authNotifierProvider).user?.role == 'worker';
     final reasonController = TextEditingController();
     final descController = TextEditingController();
 
@@ -928,11 +960,14 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
       builder: (context) {
         return AlertDialog(
           scrollable: true,
-          title: const Text('Report Worker'),
+          title: Text(isWorker ? 'Report Customer / File Dispute' : 'Report Worker'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CustomTextField(controller: reasonController, labelText: 'Reason (e.g. Overcharged, Behaviour)'),
+              CustomTextField(
+                controller: reasonController, 
+                labelText: isWorker ? 'Reason (e.g. Payment dispute, Behaviour)' : 'Reason (e.g. Overcharged, Behaviour)'
+              ),
               const SizedBox(height: 12),
               CustomTextField(controller: descController, labelText: 'Description', maxLines: 3),
             ],
@@ -959,32 +994,45 @@ class _LiveTrackingPageState extends ConsumerState<LiveTrackingPage> {
     );
   }
 
-  Widget _buildAroundMarker(BuildContext context, {required IconData icon, required Color color, required String label}) {
+  Widget _buildAroundMarker(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String label,
+    bool topCircle = false,
+  }) {
+    final markerNode = TeardropPin(
+      pinColor: color,
+      icon: icon,
+      iconColor: color,
+      size: 32,
+    );
+
+    final labelNode = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.78),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+      ),
+    );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.75),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            shape: BoxShape.circle,
-            border: Border.all(color: color, width: 1.5),
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
-      ],
+      children: topCircle 
+          ? [
+              markerNode,
+              const SizedBox(height: 3),
+              labelNode,
+            ]
+          : [
+              labelNode,
+              const SizedBox(height: 3),
+              markerNode,
+            ],
     );
   }
 
@@ -1223,7 +1271,15 @@ class _LiveMapPainter extends CustomPainter {
         center.dy + (size.height * -0.3 * (workerLngOffset / 0.015)),
       );
       
-      canvas.drawLine(workerPos, center, routePaint);
+      final routePath = Path();
+      routePath.moveTo(workerPos.dx, workerPos.dy);
+      if (workerLngOffset > 0.0) {
+        routePath.lineTo(center.dx + size.width * 0.3, center.dy);
+        routePath.lineTo(center.dx, center.dy);
+      } else {
+        routePath.lineTo(center.dx, center.dy);
+      }
+      canvas.drawPath(routePath, routePaint);
     }
 
     // Draw Road Labels

@@ -16,18 +16,18 @@ class WorkerLoginPage extends ConsumerStatefulWidget {
 
 class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _govIdController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   @override
   void dispose() {
-    _govIdController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
   void _onVerifyPressed() async {
     if (_formKey.currentState!.validate()) {
       ref.read(authNotifierProvider.notifier).clearError();
-      await ref.read(authNotifierProvider.notifier).requestWorkerLogin(_govIdController.text.trim());
+      await ref.read(authNotifierProvider.notifier).requestWorkerLogin(_phoneController.text.trim());
       
       final authState = ref.read(authNotifierProvider);
       if (authState.status == AuthStatus.otpRequired && mounted) {
@@ -82,7 +82,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Workers registered as ${widget.category.toLowerCase()}s must be enrolled in the FIXEN database. Enter your Government Worker ID to receive a verification OTP on your registered mobile number.',
+                  'Workers registered as ${widget.category.toLowerCase()}s must be enrolled in the FIXEN database. Enter your registered mobile number to receive a verification OTP.',
                   style: TextStyle(
                     fontSize: 15,
                     color: isDark ? Colors.white60 : const Color(0xFF475569),
@@ -91,13 +91,14 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                 ),
                 const SizedBox(height: 36),
                 
-                // Gov ID Field
+                // Phone Field
                 CustomTextField(
-                  controller: _govIdController,
-                  labelText: 'Government Worker ID',
-                  hintText: 'e.g., W12345',
-                  prefixIcon: Icons.badge_outlined,
-                  validator: Validators.validateGovId,
+                  controller: _phoneController,
+                  labelText: 'Registered Mobile Number',
+                  hintText: 'e.g., +919876543210',
+                  prefixIcon: Icons.phone_android_rounded,
+                  keyboardType: TextInputType.phone,
+                  validator: Validators.validatePhone,
                 ),
                 const SizedBox(height: 32),
                 
@@ -122,7 +123,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Self-registration is not supported. If you are a new worker, please contact the FIXEN onboarding branch to submit your paperwork.',
+                          'Self-registration is not supported. If you are a new worker, please contact the nearest FIXEN office to complete your enrollment and register.',
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark ? Colors.white60 : const Color(0xFF475569),

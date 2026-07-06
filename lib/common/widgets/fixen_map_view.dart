@@ -42,11 +42,11 @@ class FixenMapView extends StatelessWidget {
   });
 
   static bool get supportsGoogleMaps {
+    if (kIsWeb) return false;
     final key = EnvConfig.googleMapsApiKey;
     if (key.isEmpty || key.contains('MOCK') || key.startsWith('AIzaSyA1B2C3D4E5F6G7H8I9J0K')) {
       return false;
     }
-    if (kIsWeb) return true;
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
   }
@@ -166,25 +166,43 @@ class _FallbackMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.72),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.engineering_rounded, color: Colors.white, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-            ),
-          ],
+    Color pinColor = Colors.grey;
+    IconData markerIcon = Icons.engineering_rounded;
+
+    final cat = label.toLowerCase();
+    if (cat.contains('electric')) {
+      pinColor = const Color(0xFFFBBF24); // Electrician Yellow
+      markerIcon = Icons.electric_bolt_rounded;
+    } else if (cat.contains('carpenter')) {
+      pinColor = const Color(0xFF8B5A2B); // Wooden Brown
+      markerIcon = Icons.construction_rounded;
+    } else if (cat.contains('plumber')) {
+      pinColor = const Color(0xFF2563EB); // Plumber Blue
+      markerIcon = Icons.plumbing_rounded;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TeardropPin(
+          pinColor: pinColor,
+          icon: markerIcon,
+          iconColor: pinColor,
+          size: 36,
         ),
-      ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.78),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -220,4 +238,83 @@ class _FallbackMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FallbackMapPainter oldDelegate) => oldDelegate.isDark != isDark;
+}
+
+class TeardropPin extends StatelessWidget {
+  final Color pinColor;
+  final IconData icon;
+  final Color iconColor;
+  final double size;
+
+  const TeardropPin({
+    super.key,
+    required this.pinColor,
+    required this.icon,
+    required this.iconColor,
+    this.size = 40,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size * 1.3,
+      child: CustomPaint(
+        painter: _TeardropPinPainter(pinColor: pinColor),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            width: size * 0.72,
+            height: size * 0.72,
+            margin: EdgeInsets.only(top: size * 0.08),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: size * 0.44,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TeardropPinPainter extends CustomPainter {
+  final Color pinColor;
+
+  _TeardropPinPainter({required this.pinColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = pinColor
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final double w = size.width;
+    final double h = size.height;
+    final double r = w / 2;
+
+    // Draw teardrop pin shape pointing down to (r, h)
+    path.moveTo(r, h);
+    path.cubicTo(0, h * 0.6, 0, r, r, 0);
+    path.cubicTo(w, r, w, h * 0.6, r, h);
+    path.close();
+
+    // Draw shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawPath(path.shift(const Offset(0, 2)), shadowPaint);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TeardropPinPainter oldDelegate) =>
+      oldDelegate.pinColor != pinColor;
 }

@@ -89,7 +89,7 @@ exports.blockWorker = async (req, res, next) => {
   }
 };
 
-// @desc    Get all weekly commission logs for tracking
+// @desc    Get all monthly commission logs for tracking
 // @route   GET /api/v1/admin/commissions
 // @access  Private (Admin)
 exports.getAllCommissions = async (req, res, next) => {
@@ -100,7 +100,7 @@ exports.getAllCommissions = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Weekly commission logs retrieved successfully',
+      message: 'Monthly commission logs retrieved successfully',
       commissions,
       data: {
         commissions
@@ -111,7 +111,7 @@ exports.getAllCommissions = async (req, res, next) => {
   }
 };
 
-// @desc    Collect worker's weekly commission and clear balance
+// @desc    Collect worker's monthly commission and clear balance
 // @route   POST /api/v1/admin/commissions/:id/collect
 // @access  Private (Admin)
 exports.collectCommission = async (req, res, next) => {

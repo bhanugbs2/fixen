@@ -11,9 +11,9 @@ abstract class AuthRepository {
     required String address,
     String? profileImagePath,
   });
-  Future<String> workerLogin({required String governmentId}); // Returns registered mobile number
+  Future<String> workerLogin({required String mobileNumber}); // Returns registered mobile number
   Future<UserModel> verifyWorkerOtp({
-    required String governmentId,
+    required String mobileNumber,
     required String otp,
     String? category,
   });

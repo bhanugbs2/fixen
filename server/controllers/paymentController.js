@@ -44,7 +44,7 @@ const processSuccessfulPayment = async (booking, amount, paymentMethod, paymentD
   // Update Worker's earnings & commission
   const worker = await Worker.findById(booking.worker);
   if (worker) {
-    worker.weeklyEarnings = (worker.weeklyEarnings || 0) + amount;
+    worker.monthlyEarnings = (worker.monthlyEarnings || 0) + amount;
     worker.commissionDue = (worker.commissionDue || 0) + commissionAmount;
     worker.isBusy = false; // Worker is now free for new bookings
     
@@ -59,7 +59,7 @@ const processSuccessfulPayment = async (booking, amount, paymentMethod, paymentD
     await Commission.create({
       worker: worker._id,
       amount: commissionAmount,
-      weeklyEarnings: worker.weeklyEarnings,
+      monthlyEarnings: worker.monthlyEarnings,
       status: 'unpaid'
     });
   }
