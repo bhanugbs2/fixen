@@ -263,7 +263,7 @@ Once connected, run the following queries:
 MongoDB Compass is the official GUI client for MongoDB. It provides a visual interface to query and modify data.
 
 1.  **Open Compass** and insert your Connection String:
-    `mongodb+srv://fixen_app:fixen7115@cluster0.kxj0knn.mongodb.net/` (as retrieved from your [.env](file:///d:/fixen-app/server/.env) config).
+    `mongodb+srv://fixen_app:fixen@cluster0.kxj0knn.mongodb.net/` (as retrieved from your [.env](file:///d:/fixen-app/server/.env) config).
 2.  Navigate to the left panel and click on the **`fixen`** database.
 3.  Click on the target collection, for example, `bookings`.
 4.  Apply a query filter inside the filter bar (e.g., `{ "status": "cancelled" }`) and click **Find**.
