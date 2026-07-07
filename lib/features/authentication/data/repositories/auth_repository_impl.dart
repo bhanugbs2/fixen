@@ -38,6 +38,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
       if (e is DioException && e.response != null) {
         throw ServerException(message: e.response?.data['message'] ?? 'Authentication failed.');
       }
@@ -60,6 +63,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
       if (e is DioException && e.response != null) {
         throw ServerException(message: e.response?.data['message'] ?? 'Social login failed.');
       }
@@ -88,9 +94,10 @@ class AuthRepositoryImpl implements AuthRepository {
       });
 
       final data = response.data;
-      final accessToken = data['accessToken'] ?? '';
-      final refreshToken = data['refreshToken'] ?? '';
-      final user = UserModel.fromJson(data['user'] ?? data);
+      final accessToken = data['accessToken'] ?? data['data']?['accessToken'] ?? '';
+      final refreshToken = data['refreshToken'] ?? data['data']?['refreshToken'] ?? '';
+      final userJson = data['user'] ?? data['data']?['user'] ?? data;
+      final user = UserModel.fromJson(userJson);
 
       await _secureStorage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
       await _secureStorage.saveUserRole(user.role);
@@ -98,6 +105,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
       if (e is DioException && e.response != null) {
         throw ServerException(message: e.response?.data['message'] ?? 'Registration failed.');
       }
@@ -106,13 +116,18 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<String> workerLogin({required String mobileNumber}) async {
+  Future<String> workerLogin({required String workerId}) async {
     try {
       final response = await _apiClient.post('/auth/worker-login', data: {
-        'mobileNumber': mobileNumber,
+        'workerId': workerId,
       });
-      return response.data['mobileNumber'] ?? '';
+      final mobile = response.data['mobileNumber'] ?? response.data['data']?['mobileNumber'] ?? '';
+      final otp = response.data['otp'] ?? response.data['data']?['otp'] ?? '';
+      return '$mobile|$otp';
     } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
       if (e is DioException && e.response != null) {
         throw ServerException(message: e.response?.data['message'] ?? 'Worker login failed.');
       }
@@ -122,20 +137,21 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<UserModel> verifyWorkerOtp({
-    required String mobileNumber,
+    required String workerId,
     required String otp,
     String? category,
   }) async {
     try {
       final response = await _apiClient.post('/auth/verify-otp', data: {
-        'mobileNumber': mobileNumber,
+        'workerId': workerId,
         'otp': otp,
       });
 
       final data = response.data;
-      final accessToken = data['accessToken'] ?? '';
-      final refreshToken = data['refreshToken'] ?? '';
-      final user = UserModel.fromJson(data['user'] ?? data);
+      final accessToken = data['accessToken'] ?? data['data']?['accessToken'] ?? '';
+      final refreshToken = data['refreshToken'] ?? data['data']?['refreshToken'] ?? '';
+      final userJson = data['user'] ?? data['data']?['user'] ?? data;
+      final user = UserModel.fromJson(userJson);
 
       await _secureStorage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
       await _secureStorage.saveUserRole(user.role);
@@ -143,6 +159,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return user;
     } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
       if (e is DioException && e.response != null) {
         throw ServerException(message: e.response?.data['message'] ?? 'Incorrect OTP. Verification failed.');
       }
@@ -159,9 +178,10 @@ class AuthRepositoryImpl implements AuthRepository {
       });
 
       final data = response.data;
-      final accessToken = data['accessToken'] ?? '';
-      final refreshToken = data['refreshToken'] ?? '';
-      final user = UserModel.fromJson(data['user'] ?? data);
+      final accessToken = data['accessToken'] ?? data['data']?['accessToken'] ?? '';
+      final refreshToken = data['refreshToken'] ?? data['data']?['refreshToken'] ?? '';
+      final userJson = data['user'] ?? data['data']?['user'] ?? data;
+      final user = UserModel.fromJson(userJson);
 
       await _secureStorage.saveTokens(accessToken: accessToken, refreshToken: refreshToken);
       await _secureStorage.saveUserRole(user.role);
@@ -173,6 +193,9 @@ class AuthRepositoryImpl implements AuthRepository {
         final mockUser = _getMockUser(email, 'admin');
         await _saveMockSession(mockUser);
         return mockUser;
+      }
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
       }
       throw ServerException(message: 'Admin authorization failed.');
     }
@@ -250,10 +273,14 @@ class AuthRepositoryImpl implements AuthRepository {
       });
 
       final data = response.data;
-      final user = UserModel.fromJson(data['user'] ?? data);
+      final userJson = data['user'] ?? data['data']?['user'] ?? data;
+      final user = UserModel.fromJson(userJson);
       await HiveHelper.cacheData(HiveHelper.profileBoxName, 'current_user', user.toJson());
       return user;
     } catch (e) {
+      if (e is ServerException || e is NetworkException) {
+        rethrow;
+      }
       // Local fallback for offline/mock database
       final cachedJson = HiveHelper.getCachedData(HiveHelper.profileBoxName, 'current_user');
       if (cachedJson != null) {

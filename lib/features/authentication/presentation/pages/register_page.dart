@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +41,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Future<void> _pickImage() async {
+    if (kIsWeb) {
+      final pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _profileImage = File(pickedFile.path);
+        });
+      }
+      return;
+    }
     // Request camera/gallery permissions first
     final cameraStatus = await Permission.camera.request();
     if (cameraStatus.isGranted) {
@@ -63,18 +76,20 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   void _onRegisterPressed() async {
     if (_formKey.currentState!.validate()) {
-      // First verify and request location permissions
-      final locationStatus = await Permission.location.request();
-      if (!locationStatus.isGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location permission is required to register with FIXEN.'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
+      if (!kIsWeb) {
+        // First verify and request location permissions
+        final locationStatus = await Permission.location.request();
+        if (!locationStatus.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location permission is required to register with FIXEN.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+          return;
         }
-        return;
       }
 
       ref.read(authNotifierProvider.notifier).clearError();

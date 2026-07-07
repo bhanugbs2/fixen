@@ -16,18 +16,18 @@ class WorkerLoginPage extends ConsumerStatefulWidget {
 
 class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  final _workerIdController = TextEditingController();
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _workerIdController.dispose();
     super.dispose();
   }
 
   void _onVerifyPressed() async {
     if (_formKey.currentState!.validate()) {
       ref.read(authNotifierProvider.notifier).clearError();
-      await ref.read(authNotifierProvider.notifier).requestWorkerLogin(_phoneController.text.trim());
+      await ref.read(authNotifierProvider.notifier).requestWorkerLogin(_workerIdController.text.trim());
       
       final authState = ref.read(authNotifierProvider);
       if (authState.status == AuthStatus.otpRequired && mounted) {
@@ -82,7 +82,7 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Workers registered as ${widget.category.toLowerCase()}s must be enrolled in the FIXEN database. Enter your registered mobile number to receive a verification OTP.',
+                  'Workers registered as ${widget.category.toLowerCase()}s must be enrolled in the FIXEN database. Enter your unique Worker ID to receive a verification OTP.',
                   style: TextStyle(
                     fontSize: 15,
                     color: isDark ? Colors.white60 : const Color(0xFF475569),
@@ -91,14 +91,14 @@ class _WorkerLoginPageState extends ConsumerState<WorkerLoginPage> {
                 ),
                 const SizedBox(height: 36),
                 
-                // Phone Field
+                // Worker ID Field
                 CustomTextField(
-                  controller: _phoneController,
-                  labelText: 'Registered Mobile Number',
-                  hintText: 'e.g., +919876543210',
-                  prefixIcon: Icons.phone_android_rounded,
-                  keyboardType: TextInputType.phone,
-                  validator: Validators.validatePhone,
+                  controller: _workerIdController,
+                  labelText: 'Worker ID',
+                  hintText: 'e.g., WKR001',
+                  prefixIcon: Icons.badge_outlined,
+                  keyboardType: TextInputType.text,
+                  validator: Validators.validateWorkerId,
                 ),
                 const SizedBox(height: 32),
                 

@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Worker = require('../models/Worker');
 const Admin = require('../models/Admin');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 // Token generation helper
 const generateTokens = (user) => {
@@ -126,6 +127,24 @@ exports.workerRegister = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email already registered', data: null });
     }
 
+    // Auto-generate workerId if not provided or format is requested
+    let finalWorkerId = req.body.workerId;
+    if (!finalWorkerId) {
+      const latestWorker = await Worker.findOne({ workerId: /^WKR\d{3}$/ }).sort({ workerId: -1 });
+      let nextNum = 1;
+      if (latestWorker) {
+        const match = latestWorker.workerId.match(/^WKR(\d{3})$/);
+        if (match) {
+          nextNum = parseInt(match[1]) + 1;
+        }
+      }
+      finalWorkerId = `WKR${nextNum.toString().padStart(3, '0')}`;
+    } else {
+      if (!/^WKR\d{3}$/.test(finalWorkerId)) {
+        return res.status(400).json({ success: false, message: 'Worker ID must be in format WKR### (e.g., WKR001)', data: null });
+      }
+    }
+
     // Extract uploaded files
     const profileImage = req.files?.profileImage ? `/uploads/${req.files.profileImage[0].filename}` : '';
     const aadhaarCard = req.files?.aadhaarCard ? `/uploads/${req.files.aadhaarCard[0].filename}` : '';
@@ -139,6 +158,7 @@ exports.workerRegister = async (req, res, next) => {
     }
 
     worker = await Worker.create({
+      workerId: finalWorkerId,
       name,
       email,
       password: password || 'worker123', // default fallback password if not provided
@@ -164,13 +184,13 @@ exports.workerRegister = async (req, res, next) => {
 
 exports.workerLogin = async (req, res, next) => {
   try {
-    const { mobileNumber } = req.body;
+    const { workerId } = req.body;
 
-    const worker = await Worker.findOne({ mobileNumber });
+    const worker = await Worker.findOne({ workerId });
     if (!worker) {
       return res.status(404).json({
         success: false,
-        message: 'Mobile number not registered in FIXEN database.',
+        message: 'Worker ID not registered in FIXEN database.',
         data: null
       });
     }
@@ -188,7 +208,11 @@ exports.workerLogin = async (req, res, next) => {
     worker.tempOtp = otp;
     await worker.save();
 
-    console.log(`[Worker OTP Dispatched] Mobile: ${mobileNumber} -> OTP: ${otp}`);
+    console.log('\n======================================================');
+    console.log(`📲 [SMS GATEWAY] OTP SENT TO MOBILE: ${worker.mobileNumber}`);
+    console.log(`Worker ID:                     ${workerId}`);
+    console.log(`Your FIXEN verification OTP is: ${otp}`);
+    console.log('======================================================\n');
 
     // Return the mobile number and generated OTP for development/testing ease
     return res.status(200).json({
@@ -208,9 +232,9 @@ exports.workerLogin = async (req, res, next) => {
 
 exports.verifyWorkerOtp = async (req, res, next) => {
   try {
-    const { mobileNumber, otp } = req.body;
+    const { workerId, otp } = req.body;
 
-    const worker = await Worker.findOne({ mobileNumber });
+    const worker = await Worker.findOne({ workerId });
     if (!worker) {
       return res.status(404).json({
         success: false,

@@ -6,6 +6,12 @@ const WorkerSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a name']
   },
+  workerId: {
+    type: String,
+    required: [true, 'Please add a worker ID'],
+    unique: true,
+    trim: true
+  },
   email: {
     type: String,
     required: [true, 'Please add an email'],

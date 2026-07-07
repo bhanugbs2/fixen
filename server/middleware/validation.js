@@ -60,12 +60,16 @@ const workerRegisterRules = [
 
 // Worker Login rules
 const workerLoginRules = [
-  body('mobileNumber').trim().notEmpty().withMessage('Mobile number is required')
+  body('workerId')
+    .trim()
+    .isLength({ min: 6, max: 6 }).withMessage('Worker ID must be exactly 6 characters')
 ];
 
 // Worker OTP Verification rules
 const verifyOtpRules = [
-  body('mobileNumber').trim().notEmpty().withMessage('Mobile number is required'),
+  body('workerId')
+    .trim()
+    .isLength({ min: 6, max: 6 }).withMessage('Worker ID must be exactly 6 characters'),
   body('otp').trim().isLength({ min: 6, max: 6 }).withMessage('OTP must be exactly 6 digits')
 ];
 

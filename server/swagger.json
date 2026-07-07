@@ -73,16 +73,16 @@
     },
     "/auth/worker-login": {
       "post": {
-        "summary": "Request Worker login OTP using registered mobile number",
+        "summary": "Request Worker login OTP using Worker ID",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["mobileNumber"],
+                "required": ["workerId"],
                 "properties": {
-                  "mobileNumber": { "type": "string" }
+                  "workerId": { "type": "string" }
                 }
               }
             }
@@ -102,9 +102,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["mobileNumber", "otp"],
+                "required": ["workerId", "otp"],
                 "properties": {
-                  "mobileNumber": { "type": "string" },
+                  "workerId": { "type": "string" },
                   "otp": { "type": "string", "example": "123456" }
                 }
               }

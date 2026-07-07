@@ -73,4 +73,15 @@ class Validators {
     }
     return null;
   }
+
+  static String? validateWorkerId(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Worker ID is required';
+    }
+    final idRegex = RegExp(r'^[a-zA-Z0-9]{6}$');
+    if (!idRegex.hasMatch(value.trim())) {
+      return 'Worker ID must be exactly 6 characters (alphanumeric)';
+    }
+    return null;
+  }
 }

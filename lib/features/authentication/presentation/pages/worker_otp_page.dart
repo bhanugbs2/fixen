@@ -155,7 +155,7 @@ class _WorkerOtpPageState extends ConsumerState<WorkerOtpPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'A 6-digit OTP code was sent to $maskedPhone. Enter the code to verify your profile and start receiving jobs.',
+                  'A 6-digit OTP code was sent to the registered mobile number ($maskedPhone) connected to Worker ID: ${authState.pendingWorkerId ?? ""}. Enter the code to verify your profile and start receiving jobs.',
                   style: TextStyle(
                     fontSize: 15,
                     color: isDark ? Colors.white60 : const Color(0xFF475569),
@@ -207,11 +207,12 @@ class _WorkerOtpPageState extends ConsumerState<WorkerOtpPage> {
                 const SizedBox(height: 16),
                 
                 Text(
-                  'Security Reminder: Never share your OTP with anyone. Correct code is "123456" for sandbox testing.',
+                  'Security Reminder: Never share your OTP with anyone.${authState.debugOtp != null && authState.debugOtp!.isNotEmpty ? " For testing, your received OTP is ${authState.debugOtp}." : " Correct code is \"123456\" for sandbox testing."}',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? Colors.white30 : Colors.black38,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
               ],

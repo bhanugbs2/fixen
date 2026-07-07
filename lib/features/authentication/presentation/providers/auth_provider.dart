@@ -12,6 +12,7 @@ class AuthState {
   final String? verificationMobileNumber;
   final String? pendingWorkerId;
   final String? selectedWorkerCategory;
+  final String? debugOtp;
 
   AuthState({
     required this.status,
@@ -20,6 +21,7 @@ class AuthState {
     this.verificationMobileNumber,
     this.pendingWorkerId,
     this.selectedWorkerCategory,
+    this.debugOtp,
   });
 
   factory AuthState.initial() => AuthState(status: AuthStatus.initial);
@@ -31,6 +33,7 @@ class AuthState {
     String? verificationMobileNumber,
     String? pendingWorkerId,
     String? selectedWorkerCategory,
+    String? debugOtp,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -39,6 +42,7 @@ class AuthState {
       verificationMobileNumber: verificationMobileNumber ?? this.verificationMobileNumber,
       pendingWorkerId: pendingWorkerId ?? this.pendingWorkerId,
       selectedWorkerCategory: selectedWorkerCategory ?? this.selectedWorkerCategory,
+      debugOtp: debugOtp ?? this.debugOtp,
     );
   }
 }
@@ -119,14 +123,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(selectedWorkerCategory: category);
   }
 
-  Future<void> requestWorkerLogin(String mobileNumber) async {
+  Future<void> requestWorkerLogin(String workerId) async {
     state = state.copyWith(status: AuthStatus.loading);
     try {
-      final mobile = await _repository.workerLogin(mobileNumber: mobileNumber);
+      final result = await _repository.workerLogin(workerId: workerId);
+      final parts = result.split('|');
+      final mobile = parts[0];
+      final otp = parts.length > 1 ? parts[1] : '';
       state = state.copyWith(
         status: AuthStatus.otpRequired,
         verificationMobileNumber: mobile,
-        pendingWorkerId: mobileNumber,
+        pendingWorkerId: workerId,
+        debugOtp: otp,
       );
     } catch (e) {
       state = state.copyWith(status: AuthStatus.error, errorMessage: e.toString());
@@ -135,12 +143,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> verifyWorkerOtp(String otp) async {
     if (state.pendingWorkerId == null) return false;
-    final mobileNumber = state.pendingWorkerId!;
+    final workerId = state.pendingWorkerId!;
     final category = state.selectedWorkerCategory;
     state = state.copyWith(status: AuthStatus.loading);
     try {
       final user = await _repository.verifyWorkerOtp(
-        mobileNumber: mobileNumber,
+        workerId: workerId,
         otp: otp,
         category: category,
       );
