@@ -58,7 +58,7 @@ app.use(compression());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve compiled Flutter web application client at root path
-app.use(express.static(path.join(__dirname, '../build/web')));
+app.use(express.static(path.join(__dirname, '../build/web'), { dotfiles: 'allow' }));
 
 // Swagger API Documentation Endpoint
 try {
