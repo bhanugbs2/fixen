@@ -12,7 +12,7 @@ const run = async () => {
   const args = process.argv.slice(2);
   if (args.length < 5) {
     console.log('Usage: node register_natural_customer.js <Name> <Email> <Password> <MobileNumber> <Address>');
-    console.log('Example: node register_natural_customer.js "Bhanu Prasad" "bhanu.cust@gmail.com" "password123" "+919876543299" "rajiv gandhi nagar 6/7th line, Guntur"');
+    console.log('Example: node register_natural_customer.js "Bhanu Shankar" "bhanu.cust@gmail.com" "password123" "+919876543299" "rajiv gandhi nagar 6/7th line, Guntur"');
     process.exit(1);
   }
 
